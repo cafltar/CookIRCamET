@@ -12,9 +12,6 @@ import os
 import numpy as np
 uart = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=10)
 
-#from pandas import read_csv, read_excel, DataFrame
-#from sklearn.mixture import GaussianMixture
-#from sklearn.preprocessing import StandardScaler
 from flask import Flask, render_template, send_file, make_response, url_for, Response, redirect, request
 
 from multiprocessing import Pool
@@ -75,13 +72,13 @@ def capture():
                   if r.shape[2]==1:
                         #r = ircapture()
                         cv2.imwrite(os.path.join(web,'bar.bmp'),r)
-                        fname = current_time+'_'+current_spot+'_ir.bmp'
+                        fname = current_time+'_'+current_spot+'_ir.png'
                         logging.info(fname)
                         #cv2.imwrite(os.path.join(p,fname),r)
                   else:
                         #r = bgrcapture(ry,rx)
                         cv2.imwrite(os.path.join(web,'foo.bmp'),r)
-                        fname = current_time+'_'+current_spot+'_bgr.bmp'
+                        fname = current_time+'_'+current_spot+'_bgr.png'
                         logging.info(fname)
                         #cv2.imwrite(os.path.join(p,fname),r)
       except Exception as e:
