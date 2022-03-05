@@ -6,10 +6,11 @@ from datetime import datetime
 import os
 import numpy as np
 from scipy import constants
-from pylepton.Lepton3 import Lepton3
-from picamera import PiCamera
 from scipy import special
 from pysolar.solar import get_azimuth, get_altitude
+
+from pylepton.Lepton3 import Lepton3
+from picamera import PiCamera
 import logging
 
 pi = constants.pi
