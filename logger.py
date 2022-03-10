@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 from utils import bgrcapture, ircapture, gpscapture
 from time import sleep
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import numpy as np
 import serial
@@ -51,9 +51,9 @@ gps.update()
 def bgrpcapture():
       while True:
             r = bgrcapture(ry,rx)
-            now = datetime.now()
-            current_time = now.strftime("%Y%d%m%H%M%S")
-            current_spot = gpscapture(gps,ts)
+            now = datetime.now(timezone.utc)
+            current_time = now.strftime("%Y%m%d%H%M%S")
+            current_spot,current_time_fix = gpscapture(gps,ts)
             
             cv2.imwrite(os.path.join(web,'foo.bmp'),r)
             fname = current_time+'_'+current_spot+'_bgr.bmp'
@@ -65,7 +65,7 @@ def irpcapture():
       while True:
             r = ircapture()
             now = datetime.now()
-            current_time = now.strftime("%Y%d%m%H%M%S")
+            current_time = now.strftime("%Y%m%d%H%M%S")
             current_spot = gpscapture(gps,ts)
 
             fname = current_time+'_'+current_spot+'_ir.bmp'

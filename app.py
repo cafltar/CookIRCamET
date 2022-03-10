@@ -7,7 +7,7 @@ import cv2
 from utils import bgrcapture, ircapture, gpscapture
 import serial
 from time import sleep
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import numpy as np
 uart = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=10)
@@ -52,13 +52,13 @@ def smap(f):
       return f()
 
 def capture():
-      now = datetime.now()
-      current_time = now.strftime("%Y%d%m%H%M%S")
-      current_spot = gpscapture(gps,ts)
+      now = datetime.now(timezone.utc)
+      current_time = now.strftime("%Y%m%d%H%M%S")
+      current_spot,current_time_fix = gpscapture(gps,ts)
 
 
       pool = Pool(processes=2)
-      res = pool.map(smap,[bgrpcapture,ircapture,gpspcapture])
+      res = pool.map(smap,[bgrpcapture,ircapture])
 
       sleep(5)
 
