@@ -55,8 +55,9 @@ def capture():
       now = datetime.now(timezone.utc)
       current_time = now.strftime("%Y%m%d%H%M%S")
       current_spot,current_time_fix = gpscapture(gps,ts)
-
-
+      if current_time_fix[0:3]!='999':
+            #yes! gps fix
+            current_time=current_time_fix
       pool = Pool(processes=2)
       res = pool.map(smap,[bgrpcapture,ircapture])
 
@@ -74,23 +75,23 @@ def capture():
                         cv2.imwrite(os.path.join(web,'bar.bmp'),r)
                         fname = current_time+'_'+current_spot+'_ir.png'
                         logging.info(fname)
-                        #cv2.imwrite(os.path.join(p,fname),r)
+                        cv2.imwrite(os.path.join(p,fname),r)
                   else:
                         #r = bgrcapture(ry,rx)
                         cv2.imwrite(os.path.join(web,'foo.bmp'),r)
                         fname = current_time+'_'+current_spot+'_bgr.png'
                         logging.info(fname)
-                        #cv2.imwrite(os.path.join(p,fname),r)
+                        cv2.imwrite(os.path.join(p,fname),r)
       except Exception as e:
             logging.info(e)
             sys.exit(1)
-      return current_time
+      return current_time,current_spot
 
 @app.route('/' )
 def index():
-      now_str = capture()
+      current_time, current_spot = capture()
       
-      return render_template('camera.html', time=now_str)
+      return render_template('camera.html', time=current_time+' '+current_spot)
 
 if __name__ == '__main__':      
       app.run(debug=False,host='0.0.0.0')

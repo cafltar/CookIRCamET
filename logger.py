@@ -54,7 +54,10 @@ def bgrpcapture():
             now = datetime.now(timezone.utc)
             current_time = now.strftime("%Y%m%d%H%M%S")
             current_spot,current_time_fix = gpscapture(gps,ts)
-            
+            if current_time_fix[0:3]!='999':
+                  #yes! gps fix
+                  current_time=current_time_fix
+
             cv2.imwrite(os.path.join(web,'foo.bmp'),r)
             fname = current_time+'_'+current_spot+'_bgr.bmp'
             logging.info(fname)
@@ -66,7 +69,10 @@ def irpcapture():
             r = ircapture()
             now = datetime.now()
             current_time = now.strftime("%Y%m%d%H%M%S")
-            current_spot = gpscapture(gps,ts)
+            current_spot, current_time_fix = gpscapture(gps,ts)
+            if current_time_fix[0:3]!='999':
+                  #yes! gps fix
+                  current_time=current_time_fix
 
             fname = current_time+'_'+current_spot+'_ir.bmp'
             logging.info(fname)
@@ -81,7 +87,12 @@ def index():
       
       now = datetime.now()
       current_time = now.strftime("%Y%d%m%H%M%S")
-      return render_template('camera.html', time=current_time)
+      current_spot, current_time_fix = gpscapture(gps,ts)
+      if current_time_fix[0:3]!='999':
+            #yes! gps fix
+            current_time=current_time_fix
+
+      return render_template('camera.html', time=current_time+' '+current_spot)
 
 if __name__ == '__main__':     
       if len(sys.argv)>1:
