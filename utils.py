@@ -9,14 +9,10 @@ import numpy as np
 
 from pylepton.Lepton3 import Lepton3
 from picamera import PiCamera
-import logging
-   
+import logging 
 
 def gpscapture(GPS,ts):
-    logging.debug('GPS start %f',time.monotonic())
-    lat = list()
-    lng = list()
-    gpstime = list()
+    logging.info('GPS start %f',time.monotonic())
     last_print = time.monotonic()
         
     # Make sure to call gps.update() every loop iteration and at least twice
@@ -29,7 +25,7 @@ def gpscapture(GPS,ts):
         if time.monotonic()-last_print>=ts:
             last_print=time.monotonic()
             if GPS.has_fix and GPS.update():
-                gpsstring="{0:3.4f}_{1:3.4f}".format(GPS.longitude,GPS.latitude)
+                gpsstring="{0:3.6f}_{1:3.6f}".format(GPS.longitude,GPS.latitude)
                 timestring="{}{}{}{:02}{:02}{:02}".format(GPS.timestamp_utc.tm_year,  # Grab parts of the time from the
                                                      GPS.timestamp_utc.tm_mon,  # struct_time object that holds
                                                      GPS.timestamp_utc.tm_mday,  # the fix time.  Note you might
@@ -37,14 +33,16 @@ def gpscapture(GPS,ts):
                                                      GPS.timestamp_utc.tm_min,  # month!
                                                      GPS.timestamp_utc.tm_sec)
                 logging.info(timestring)
-                break
-            else:
-                gpsstring="{0:3.4f}_{1:3.4f}".format(999.9999,999.9999)
-                timestring="99999999999999"
-                
+                logging.info('GPS end %f',time.monotonic())
+                return gpsstring, timestring
+               
         m+=1
         time.sleep(ts)
-        logging.debug('GPS end %f',time.monotonic())
+    logging.debug('GPS end %f',time.monotonic())
+    gpsstring="{0:3.6f}_{1:3.6f}".format(999.999999,999.999999)
+    timestring="99999999999999"
+    logging.info(timestring)
+    logging.info('GPS end %f',time.monotonic())
     return gpsstring, timestring
 
 

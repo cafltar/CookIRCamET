@@ -37,8 +37,7 @@ ry,rx=160,128#3840,2160
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 #Initialize GPS
-ts=.1
-uart = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=10)
+ts=1
 gps = adafruit_gps.GPS(uart, debug=False)
 # Turn on the basic GGA and RMC info (what you typically want)
 gps.send_command(b"PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")
