@@ -28,7 +28,7 @@ sys.path.insert(0,gpsPath)
 
 import adafruit_gps
 
-home = os.path.expanduser("~")
+home = os.path.join("/home","pi")
 p = os.path.join(home,'CookIRCamET','Images')
 web = os.path.join(home,'CookIRCamET','static')
 lep = os.path.join(home,'LeptonModule','software','raspberrypi_capture')
@@ -46,20 +46,17 @@ ms=str(int(1e3*ts))
 gps.send_command(bytearray("PMTK220,"+ms,'utf-8'))
 
 gps.update()
+#for logger it's stationary
+current_spot,current_time_fix = gpscapture(gps,ts)
 
 def bgrpcapture():
       while True:
             r = bgrcapture(ry,rx)
             now = datetime.now(timezone.utc)
             current_time = now.strftime("%Y%m%d%H%M%S")
-            current_spot,current_time_fix = gpscapture(gps,ts)
-            if current_time_fix[0:3]!='999':
-                  #yes! gps fix
-                  current_time=current_time_fix
-
             cv2.imwrite(os.path.join(web,'foo.bmp'),r)
-            fname = current_time+'_'+current_spot+'_bgr.bmp'
-            logging.info(fname)
+            fname = current_time+'_'+current_spot+'_bgr.png'
+            logging.info(os.path.join(p,fname))
             cv2.imwrite(os.path.join(p,fname),r)
             sleep(app.config['waittime'])
       
@@ -68,13 +65,8 @@ def irpcapture():
             r = ircapture()
             now = datetime.now()
             current_time = now.strftime("%Y%m%d%H%M%S")
-            current_spot, current_time_fix = gpscapture(gps,ts)
-            if current_time_fix[0:3]!='999':
-                  #yes! gps fix
-                  current_time=current_time_fix
-
-            fname = current_time+'_'+current_spot+'_ir.bmp'
-            logging.info(fname)
+            fname = current_time+'_'+current_spot+'_ir.png'
+            logging.info(os.path.join(p,fname))
             cv2.imwrite(os.path.join(p,fname),r)
             cv2.imwrite(os.path.join(web,'bar.bmp'),r)
             sleep(app.config['waittime'])
@@ -86,10 +78,6 @@ def index():
       
       now = datetime.now()
       current_time = now.strftime("%Y%d%m%H%M%S")
-      current_spot, current_time_fix = gpscapture(gps,ts)
-      if current_time_fix[0:3]!='999':
-            #yes! gps fix
-            current_time=current_time_fix
 
       return render_template('camera.html', time=current_time+' '+current_spot)
 
@@ -100,10 +88,6 @@ if __name__ == '__main__':
             waittime = 300
 
       app.config['waittime'] = waittime
-#      with Pool(processes=2) as pool:
-#            p = pool.map(smap,[bgrpcapture,irpcapture])
-#            app.run(debug=False,host='0.0.0.0')
-#            p.join()
       q1=Process(target=bgrpcapture)
       q2=Process(target=irpcapture)
       q1.start()
