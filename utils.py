@@ -13,38 +13,27 @@ import logging
 
 def gpscapture(GPS,ts):
     logging.info('GPS start %f',time.monotonic())
-    last_print = time.monotonic()
-        
+    gpsstring = None
+    timestring = None    
     # Make sure to call gps.update() every loop iteration and at least twice
     # as fast as data comes from the GPS unit.
     # This returns a bool that's true if it parsed new data (you can ignore it
     # though if you don't care and instead look at the has_fix property).
     m=0
-    while m<10:
+    while gpsstring is None and m<10:
         GPS.update()
-        if time.monotonic()-last_print>=ts:
-            last_print=time.monotonic()
-            if GPS.has_fix and GPS.update():
-                gpsstring="{0:3.6f}_{1:3.6f}".format(GPS.longitude,GPS.latitude)
-                timestring="{}{}{}{:02}{:02}{:02}".format(GPS.timestamp_utc.tm_year,  # Grab parts of the time from the
-                                                     GPS.timestamp_utc.tm_mon,  # struct_time object that holds
-                                                     GPS.timestamp_utc.tm_mday,  # the fix time.  Note you might
-                                                     GPS.timestamp_utc.tm_hour,  # not get all data like year, day,
-                                                     GPS.timestamp_utc.tm_min,  # month!
-                                                     GPS.timestamp_utc.tm_sec)
-                logging.info(timestring)
-                logging.info('GPS end %f',time.monotonic())
-                return gpsstring, timestring
-               
-        m+=1
         time.sleep(ts)
-    logging.debug('GPS end %f',time.monotonic())
-    gpsstring="{0:3.6f}_{1:3.6f}".format(999.999999,999.999999)
-    timestring="99999999999999"
-    logging.info(timestring)
+        if GPS.has_fix and GPS.update():
+            gpsstring="{0:3.6f}_{1:3.6f}".format(GPS.longitude,GPS.latitude)
+            timestring="{}{}{}{:02}{:02}{:02}".format(GPS.timestamp_utc.tm_year,  # Grab parts of the time from the
+                                                      GPS.timestamp_utc.tm_mon,  # struct_time object that holds
+                                                      GPS.timestamp_utc.tm_mday,  # the fix time.  Note you might
+                                                      GPS.timestamp_utc.tm_hour,  # not get all data like year, day,
+                                                      GPS.timestamp_utc.tm_min,  # month!
+                                                      GPS.timestamp_utc.tm_sec)
+        m = m+1
     logging.info('GPS end %f',time.monotonic())
     return gpsstring, timestring
-
 
 def ircapture():
     device = "/dev/spidev0.0"

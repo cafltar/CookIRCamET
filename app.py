@@ -53,8 +53,12 @@ def smap(f):
 def capture():
       now = datetime.now(timezone.utc)
       current_time = now.strftime("%Y%m%d%H%M%S")
-      current_spot,current_time_fix = gpscapture(gps,ts)
-      if current_time_fix[0:3]!='999':
+      current_spot0,current_time_fix = gpscapture(gps,ts)
+      if current_spot0:
+            current_spot = current_spot0
+      else:
+            current_spot = 'nofix'
+      if current_time_fix:
             #yes! gps fix
             current_time=current_time_fix
       pool = Pool(processes=2)

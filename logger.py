@@ -46,9 +46,13 @@ ms=str(int(1e3*ts))
 gps.send_command(bytearray("PMTK220,"+ms,'utf-8'))
 
 gps.update()
+
 #for logger it's stationary
 current_spot,current_time_fix = gpscapture(gps,ts)
 
+if current_spot is None:
+      current_spot = 'nofix'
+      
 def bgrpcapture():
       while True:
             r = bgrcapture(ry,rx)
