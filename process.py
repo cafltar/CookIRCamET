@@ -32,7 +32,7 @@ for f in files:
         lat = np.nan
         
     if 'bgr' in f:
-        bgr = cv2.imread(os.path.join(p,f))
+        bgr = cv2.imread(os.path.join(p,f),cv2.IMREAD_UNCHANGED)
         hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
         h,s,v = cv2.split(hsv)
         img_size = h.shape
@@ -45,6 +45,6 @@ for f in files:
         cv2.imwrite(os.path.join(p2,fseg),classes)
         logging.info(os.path.join(p2,fseg))
     if 'ir' in f:
-        ir = cv2.imread(os.path.join(p,f))
+        ir = cv2.imread(os.path.join(p,f),cv2.IMREAD_UNCHANGED))
 
         

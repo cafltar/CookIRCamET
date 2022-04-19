@@ -75,10 +75,11 @@ def capture():
             for r in res:
                   if r.shape[2]==1:
                         #r = ircapture()
-                        cv2.imwrite(os.path.join(web,'bar.bmp'),r)
                         fname = current_time+'_'+current_spot+'_ir.png'
                         logging.info(fname)
                         cv2.imwrite(os.path.join(p,fname),r)
+                        np.right_shift(r, 8, r)
+                        cv2.imwrite(os.path.join(web,'bar.bmp'),np.uint8(r))
                   else:
                         #r = bgrcapture(ry,rx)
                         cv2.imwrite(os.path.join(web,'foo.bmp'),r)
