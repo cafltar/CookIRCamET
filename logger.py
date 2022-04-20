@@ -72,6 +72,7 @@ def irpcapture():
             fname = current_time+'_'+current_spot+'_ir.png'
             logging.info(os.path.join(p,fname))
             cv2.imwrite(os.path.join(p,fname),r)
+            cv2.normalize(r, r, 0, 65535, cv2.NORM_MINMAX)
             np.right_shift(r, 8, r)
             cv2.imwrite(os.path.join(web,'bar.bmp'),np.uint8(r))
             sleep(app.config['waittime'])

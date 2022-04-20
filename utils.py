@@ -55,7 +55,7 @@ def ircapture():
             
     #cv2.normalize(a, a, 0, 65535, cv2.NORM_MINMAX)
     #np.right_shift(a, 8, a)
-    return np.uint16(a)
+    return a
 
 def bgrcapture(ry,rx):
   with PiCamera(resolution = (ry,rx)) as camera:

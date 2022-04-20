@@ -1,4 +1,4 @@
-import sys
+ import sys
 import numpy as np
 import cv2
 from time import sleep
@@ -33,7 +33,10 @@ epsilon = 0.622
 gamma_c = 0.0658
 # gas constant for dry air, J/(kg*degK)
 R_d = 287.04
-
+#elevation
+ele =
+Pz =101.3*(((293-0.0065*ele)/293)^5.26)#kPa
+gamma = Pz*.000665#kPa/C
 #measurements:
 #Ta, P, ea
 #Tc, Ts
