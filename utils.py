@@ -6,10 +6,34 @@ from time import sleep
 from datetime import datetime
 import os
 import numpy as np
+from scipy import constants
+from scipy import special
 
 from pylepton.Lepton3 import Lepton3
 from picamera import PiCamera
 import logging 
+
+pi = constants.pi
+g = constants.g #m/s2
+boltz = constant.Stefan_Boltzmann_constant# W/K4/m2
+vonk = 0.4 #Von Karman
+Tk = 273.16 #0 C
+rho_a = 1.205 #kg/m3
+Gsc = 1367 #W/m2
+lam = 2450 #kJ/kg
+# heat capacity of dry air at constant pressure (J kg-1 K-1)
+c_pd = 1003.5
+# heat capacity of water vapour at constant pressure (J kg-1 K-1)
+c_pv = 1865
+# heat capacity of mixed air at constant pressure (J kg-1 K-1)
+c_p = 1013
+
+# ratio of the molecular weight of water vapor to dry air
+epsilon = 0.622
+# Psicrometric Constant kPa K-1
+gamma_c = 0.0658
+# gas constant for dry air, J/(kg*degK)
+R_d = 287.04
 
 def gpscapture(GPS,ts):
     logging.info('GPS start %f',time.monotonic())
