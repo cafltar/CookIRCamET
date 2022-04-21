@@ -9,17 +9,60 @@ import os
 import numpy as np
 import logging 
 
+
+def ea(P , Ta , HP , eaOPT):
+
+#def ea to compute actual vapor pressure of the air (kPa)
+
+                              #P = Barometric pressure (kPa)
+#Ta = Air temperature, usually around 2 m height (C)
+                              #HP = Humidity parameter, depends on eaOPT
+#eaOPT = Option to specify which humidity paramater is used
+                              #           to compute actual vapor pressure of the air (ea, kPa)
+#           eaOPT = 1: RH (%) is used
+                              #           eaOPT = 2: Twet (%) is used
+#           eaOPT = 3: Tdew (%) is used
+
+                              #Variable definitions internal to this function
+# es     #Saturated vapor pressure of the air (kPa)
+                              # RH     #Relative humidity (%)
+# Twet   #Wet bulb temperature (C)
+                              # Tdew   #Dew point temperature (C)
+# apsy   #Psychrometer coefficient
+                              # gammapsy   #Psychrometer constant
+
+if eaOPT = 1 Then
+    RH = HP
+    es = 0.61078 * Exp((17.269 * Ta) / (237.3 + Ta))
+    ea = es * RH / 100
+    Else
+    if eaOPT = 2 Then
+        Twet = HP
+        apsy = 0.000662 #For aspirated psychrometers, FAO 56 p. 38
+                                      gammapsy = P * apsy
+                                      es = 0.61078 * Exp((17.269 * Twet) / (237.3 + Twet))
+                                      ea = es - gammapsy * (Ta - Twet)
+                                  Else
+                                      Tdew = HP
+                                      ea = 0.61078 * Exp((17.269 * Tdew) / (237.3 + Tdew))
+       
+
+def esa(T):#saturation vapor pressure kPa, T is temp in deg C
+    return  0.61078 * np.exp((17.269 * T) / (237.3 + T))
+
 def latent(T):#latent heat of vaporization kJ/kg at T deg C
     return 2501 - 0002.361 * T
-def slope(T):#kPa/K - slope of vp curve, T in C
-    return 4098 * (0.6108 * np.exp((17.27 * T) / (T + 237.3))) / ((T + 237.3) ** 2)
+
+def slope(T):#kPa/C - slope of vp curve, T in C
+    return 4098 * (0.6108 * np.exp((17.269 * T) / (T + 237.3))) / ((T + 237.3) ** 2)
+
 def rho_a(T,e,P):#density of moist air in kg/m3 - T in C, e vapor pressure kPa, P baro pressure kPa
     return P / (0.287 * (T + 273.16)) * (1 - 0.378 * e/ P)
-def gamm_psy():#psychrometric constant
-    return ((1.013 * 10 ** -6) * P) / (0.622 * latent(T))
-    
-    
-def PMTc(solzen , BP , Ta , HP , eaOPT ,
+
+def gamm_psy():#psychrometric constant kPa/C
+    return ((1.013 * 10 ** -6) * P) / (0.622 * latent(T)) 
+
+def PMTc(solzen , P , Ta , HP , eaOPT ,
               z , hc , dhc , zomhc , sc , LAI ,
               uref , hcref , Tr , i , t ,
               Rn , GRnday , GRnnight , rcday , rcnight ) 
@@ -38,19 +81,18 @@ def PMTc(solzen , BP , Ta , HP , eaOPT ,
 #gammastar  #=gamma*(1+rc/ra) (kPa C-1)
 
 if solzen < 90:
-#if Rn > 0:
-G = Rn * GRnday
-rc = rcday
-Else
-G = Rn * GRnnight
-rc = rcnight
+    G = Rn * GRnday
+    rc = rcday
+else:
+    G = Rn * GRnnight
+    rc = rcnight
 
 
-gamma = 0.000665 * BP
+gamma = 0.000665 * P
 delta = slope(Ta)
-es = 0.61078 * Exp((17.269 * Ta) / (237.3 + Ta))
-ea1 = ea(BP, Ta, HP, eaOPT)
-rhoa = BP / (0.287 * (Ta + 273.16)) * (1 - 0.378 * ea1 / BP)
+es = esa(Ta)
+ea1 = ea(P, Ta, HP, eaOPT)
+rhoa = P / (0.287 * (Ta + 273.16)) * (1 - 0.378 * ea1 / P)
 ra = rahRi(z, hc, dhc, zomhc, sc, 5, rhoa, uref, hcref, Ta, Tr)
 gammastar = gamma * (1 + rc / ra)
 
@@ -190,7 +232,7 @@ if L > 0:  #Stable conditions
 Psih = -5 * (z - d) / L
 PsiM = -5 * (z - d) / L
 
-Else    #Unstable conditions
+else:    #Unstable conditions
 
 X = (1 - 16 * (z - d) / L) ^ 0.25
 Psih = 2 * Log((1 + (X ^ 2)) / 2)
@@ -417,7 +459,7 @@ if Tc < Ta:     #Stable condition, Ri is positive
 rahRi = psiRi * (1 / u) * ((1 / 0.41) * Log((z - d + zom) / zom)) ^ 2
 
 20 
-def Tsimax(solzen , BP , Ta , HP , eaOPT ,
+def Tsimax(solzen , P , Ta , HP , eaOPT ,
 z , hc , dhc , zomhc , sc , LAI ,
 uref , hcref , Tr , i , t ,
 Rn , GRnday , GRnnight , rcday , rcnight ,
@@ -443,8 +485,8 @@ G = Rn * GRnnight
 rc = rcnight
 
 
-ea1 = ea(BP, Ta, HP, eaOPT)
-rhoa = BP / (0.287 * (Ta + 273.16)) * (1 - 0.378 * ea1 / BP)
+ea1 = ea(P, Ta, HP, eaOPT)
+rhoa = P / (0.287 * (Ta + 273.16)) * (1 - 0.378 * ea1 / P)
 ra = rahRi(z, hc, dhc, zomhc, sc, 5, rhoa, uref, hcref, Ta, Tc)
 #rsh1 = rsh(uref, hcref, hc, dhc, zomhc, sc, z, s, LAI, row, wc, b, c, Tr, Tc)
     Tsimax = Ta + (ra) * (Rn - G) / (rhoa * 1013)

@@ -559,43 +559,7 @@ GoTo 100
 
 Kbeam = (Rsobeam / Rsoglobal) * A * (Rs / Rsoglobal) ^ b
 
-100 
-def ea(BP As Double, Ta As Double, HP As Double, eaOPT As Integer)
-
-#def ea to compute actual vapor pressure of the air (kPa)
-
-                              #BP = Barometric pressure (kPa)
-#Ta = Air temperature, usually around 2 m height (C)
-                              #HP = Humidity parameter, depends on eaOPT
-#eaOPT = Option to specify which humidity paramater is used
-                              #           to compute actual vapor pressure of the air (ea, kPa)
-#           eaOPT = 1: RH (%) is used
-                              #           eaOPT = 2: Twet (%) is used
-#           eaOPT = 3: Tdew (%) is used
-
-                              #Variable definitions internal to this function
-# es As Double    #Saturated vapor pressure of the air (kPa)
-                              # RH As Double    #Relative humidity (%)
-# Twet As Double  #Wet bulb temperature (C)
-                              # Tdew As Double  #Dew point temperature (C)
-# apsy As Double  #Psychrometer coefficient
-                              # gammapsy As Double  #Psychrometer constant
-
-if eaOPT = 1 Then
-    RH = HP
-    es = 0.61078 * Exp((17.269 * Ta) / (237.3 + Ta))
-    ea = es * RH / 100
-    Else
-    if eaOPT = 2 Then
-        Twet = HP
-        apsy = 0.000662 #For aspirated psychrometers, FAO 56 p. 38
-                                      gammapsy = BP * apsy
-                                      es = 0.61078 * Exp((17.269 * Twet) / (237.3 + Twet))
-                                      ea = es - gammapsy * (Ta - Twet)
-                                  Else
-                                      Tdew = HP
-                                      ea = 0.61078 * Exp((17.269 * Tdew) / (237.3 + Tdew))
-                                  
+100                            
                               
 
                               

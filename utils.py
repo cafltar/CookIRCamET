@@ -35,6 +35,12 @@ gamma_c = 0.0658
 # gas constant for dry air, J/(kg*degK)
 R_d = 287.04
 
+#Monin-Obukhov parameters
+dhc = .67#displacement height/canopy height
+zomhc = 0.125#momemtun roughness over canopy height
+sc = 1#heat roughness over momentum roughness
+#bare soil
+
 def gpscapture(GPS,ts):
     logging.info('GPS start %f',time.monotonic())
     gpsstring = None
