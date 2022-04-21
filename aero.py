@@ -13,39 +13,38 @@ import logging
 def ea(P , Ta , HP , eaOPT):
 
 #def ea to compute actual vapor pressure of the air (kPa)
+    #P = Barometric pressure (kPa)
+    #Ta = Air temperature, usually around 2 m height (C)
+    #HP = Humidity parameter, depends on eaOPT
+    #eaOPT = Option to specify which humidity paramater is used
+    #           to compute actual vapor pressure of the air (ea, kPa)
+    #           eaOPT = 1: RH (%) is used
+    #           eaOPT = 2: Twet (%) is used
+    #           eaOPT = 3: Tdew (%) is used
+    
+#Variable definitions internal to this function
+    #es     #Saturated vapor pressure of the air (kPa)
+    #RH     #Relative humidity (%)
+    #Twet   #Wet bulb temperature (C)
+    #Tdew   #Dew point temperature (C)
+    #apsy   #Psychrometer coefficient
+    # gammapsy   #Psychrometer constant
 
-                              #P = Barometric pressure (kPa)
-#Ta = Air temperature, usually around 2 m height (C)
-                              #HP = Humidity parameter, depends on eaOPT
-#eaOPT = Option to specify which humidity paramater is used
-                              #           to compute actual vapor pressure of the air (ea, kPa)
-#           eaOPT = 1: RH (%) is used
-                              #           eaOPT = 2: Twet (%) is used
-#           eaOPT = 3: Tdew (%) is used
-
-                              #Variable definitions internal to this function
-# es     #Saturated vapor pressure of the air (kPa)
-                              # RH     #Relative humidity (%)
-# Twet   #Wet bulb temperature (C)
-                              # Tdew   #Dew point temperature (C)
-# apsy   #Psychrometer coefficient
-                              # gammapsy   #Psychrometer constant
-
-if eaOPT = 1 Then
-    RH = HP
-    es = 0.61078 * Exp((17.269 * Ta) / (237.3 + Ta))
-    ea = es * RH / 100
-    Else
-    if eaOPT = 2 Then
-        Twet = HP
-        apsy = 0.000662 #For aspirated psychrometers, FAO 56 p. 38
-                                      gammapsy = P * apsy
-                                      es = 0.61078 * Exp((17.269 * Twet) / (237.3 + Twet))
-                                      ea = es - gammapsy * (Ta - Twet)
-                                  Else
-                                      Tdew = HP
-                                      ea = 0.61078 * Exp((17.269 * Tdew) / (237.3 + Tdew))
-       
+    if eaOPT = 1:
+        RH = HP
+        es = esa(Ta)
+        ea = es * RH / 100
+    else:
+        if eaOPT = 2:
+            Twet = HP
+            apsy = 0.000662 #For aspirated psychrometers, FAO 56 p. 38
+            gammapsy = P * apsy
+            es = esa(Twet)
+            ea = es - gammapsy * (Ta - Twet)
+        else:
+            Tdew = HP
+            ea = esa(Tdew)
+    return ea
 
 def esa(T):#saturation vapor pressure kPa, T is temp in deg C
     return  0.61078 * np.exp((17.269 * T) / (237.3 + T))
@@ -80,29 +79,28 @@ def PMTc(solzen , P , Ta , HP , eaOPT ,
 #ra    #Aerodynamic resistance (s m-1)
 #gammastar  #=gamma*(1+rc/ra) (kPa C-1)
 
-if solzen < 90:
-    G = Rn * GRnday
-    rc = rcday
-else:
-    G = Rn * GRnnight
-    rc = rcnight
+    if solzen < 90:
+        G = Rn * GRnday
+        rc = rcday
+    else:
+        G = Rn * GRnnight
+        rc = rcnight
 
 
-gamma = 0.000665 * P
-delta = slope(Ta)
-es = esa(Ta)
-ea1 = ea(P, Ta, HP, eaOPT)
-rhoa = P / (0.287 * (Ta + 273.16)) * (1 - 0.378 * ea1 / P)
-ra = rahRi(z, hc, dhc, zomhc, sc, 5, rhoa, uref, hcref, Ta, Tr)
-gammastar = gamma * (1 + rc / ra)
+    gamma = 0.000665 * P
+    delta = slope(Ta)
+    es = esa(Ta)
+    ea1 = ea(P, Ta, HP, eaOPT)
+    rhoa = rho_a(Ta,ea1,P)
+    ra = rahRi(z, hc, dhc, zomhc, sc, 5, rhoa, uref, hcref, Ta, Tr)
+    gammastar = gamma * (1 + rc / ra)
 
-PMTc = Ta + ra * gammastar * (Rn - G) / (rhoa * 1013 * (delta + gammastar)) -
-(es - ea1) / (delta + gammastar)
+    PMTc = Ta + ra * gammastar * (Rn - G) / (rhoa * 1013 * (delta + gammastar)) -
+    (es - ea1) / (delta + gammastar)
+    return PMTc
 
 
-
-def Tsinitial(Ta , Tr , fr ,
-ea , Tc ) 
+def Tsinitial(Ta , Tr , fr , ea , Tc ) 
 #def Tsinitial to compute soil temperature Ts (C) in first iteration
 #of two source model, based on initial canopy temperature estimated
 #from Priestley-Taylor equation, directional brightness temperature
