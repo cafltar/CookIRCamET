@@ -51,8 +51,7 @@ def rhocsdir(thetas , psis , hc , wc , row , LAI , XE , Zeta , rhosoil ):
     LAIL   #Local LAI (i.e., within vegeation row) (m2 m-2)
     LAIL = LAI * row / wc
     
-    Xidir = ((rhodir - rhosoil) / (rhodir * rhosoil - 1)) * 
-    Exp(-2 * (Zeta ** 0.5) * Kdir * LAIL * PLFi * MRFi)
+    Xidir = ((rhodir - rhosoil) / (rhodir * rhosoil - 1)) * np.exp(-2 * (Zeta ** 0.5) * Kdir * LAIL * PLFi * MRFi)
 
     rhocsdir = (rhodir + Xidir) / (1 + Xidir * rhodir)  #CN98, 15.9, p. 257
 
@@ -411,12 +410,12 @@ def fcs(OPT, Pr , row , theta , rawpsi , hc , wc , Dv , FOV , thetas , psis ) :
 
         Pnr[N1] = Pr + (row / 2) * (2 * N1 - NR - 1)
 
-        H[N1, 1] = Heighte1(Pnr(N1), theta, rawpsi, hc, wc, Dv, FOV)
-        H(N1, 2) = Heighte2(Pnr(N1), theta, rawpsi, hc, wc, Dv, FOV)
-        H(N1, 3) = Heighte3(Pnr(N1), row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
-        H(N1, 4) = Heighte4(Pnr(N1), row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
-        H(N1, 5) = Heighte5(Pnr(N1), row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
-        H(N1, 6) = Heighte6(Pnr(N1), row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
+        H[N1, 0] = Heighte1(Pnr[N1], theta, rawpsi, hc, wc, Dv, FOV)
+        H[N1, 1] = Heighte2(Pnr[N1], theta, rawpsi, hc, wc, Dv, FOV)
+        H[N1, 2] = Heighte3(Pnr[N1], row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
+        H[N1, 3] = Heighte4(Pnr[N1], row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
+        H[N1, 4] = Heighte5(Pnr[N1], row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
+        H[N1, 5] = Heighte6(Pnr[N1], row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
 
         #    tantheta(N1, 1) = (H(N1, 1) + OC * MIN) / Dv
         #    tantheta(N1, 2) = (H(N1, 2) + OC * MIN) / Dv
@@ -425,13 +424,12 @@ def fcs(OPT, Pr , row , theta , rawpsi , hc , wc , Dv , FOV , thetas , psis ) :
         #    tantheta(N1, 5) = (H(N1, 5) + OC * MIN) / Dv
         #    tantheta(N1, 6) = (H(N1, 6) + OC * MIN) / Dv
 
-        if H(N1, 4) > H(N1, 1):
-            H(N1, 4) = H(N1, 1) #H1 obscurs H4 (no shaded soil visible on near-side)
-            H(N1, 3) = H(N1, 1) #H1 obscurs H3 (no shaded canopy visible on near-side)
-        if H(N1, 6) < H(N1, 2):
-            H(N1, 6) = H(N1, 2) #H2 obscurs H6 (no shaded soil visible on far-side)
-            H(N1, 5) = H(N1, 2) #H2 obscurs H5 (no shaded canopy visible on far-side)
-
+        if H[N1, 3] > H[N1, 0]:
+            H[N1, 3] = H[N1, 0] #H1 obscurs H4 (no shaded soil visible on near-side)
+            H[N1, 2] = H[N1, 0] #H1 obscurs H3 (no shaded canopy visible on near-side)
+        if H[N1, 5] < H[N1, 1]:
+            H[N1, 5] = H[N1, 1] #H2 obscurs H6 (no shaded soil visible on far-side)
+            H[N1, 4] = H[N1, 1] #H2 obscurs H5 (no shaded canopy visible on far-side)
 
         #    If H(N1, 4) > H(N1, 1) Then H(N1, 4) = H(N1, 1) #H1 obscurs H4 (no shaded soil visible on near-side)
         #    If H(N1, 3) < H(N1, 1) Then H(N1, 3) = H(N1, 1) #H1 obscurs H3 (no shaded canopy visible on near-side)
@@ -440,17 +438,17 @@ def fcs(OPT, Pr , row , theta , rawpsi , hc , wc , Dv , FOV , thetas , psis ) :
     
         # N2 As Integer
         for N2 in range(1,NR):   #Account for adjacent rows obscuring chord locations
-            if H((N2 - 1), 2) > H(N2, 4): H(N2, 4) = H((N2 - 1), 2)
+            if H[(N2 - 1), 1] > H[N2, 3]: H[N2, 3] = H[(N2 - 1), 1]
             #Far side of canopy boundary in row N2-1 obscurs near side of sunlit-shaded soil boundary in row N2
-            if H((N2 - 1), 2) > H(N2, 1): H(N2, 1) = H((N2 - 1), 2)
+            if H[(N2 - 1), 1] > H[N2, 0]: H[N2, 0] = H[(N2 - 1), 1]
             #Far side of canopy boundary in row N2-1 obscurs near side of canopy in row N2
-            if H((N2 - 1), 2) > H(N2, 3): H(N2, 3) = H((N2 - 1), 2)
+            if H[(N2 - 1), 1] > H[N2, 2]: H[N2, 1] = H[(N2 - 1), 1]
             #Far side of canopy boundary in row N2-1 obscurs near side of sunlit-shaded canopy boundary in row N2
-            if H(N2, 1) < H((N2 - 1), 6): H((N2 - 1), 6) = H(N2, 1)
+            if H[N2, 0] < H[(N2 - 1), 5]: H[(N2 - 1), 5] = H[N2, 0]
             #Near side of canopy in row N2 obscurs far side of sunlit-shaded soil boundary in row N2-1
-            if H(N2, 1) < H((N2 - 1), 2): H((N2 - 1), 2) = H(N2, 1)
+            if H[N2, 0] < H[(N2 - 1), 1]: H[(N2 - 1), 1] = H[N2, 0]
             #Near side of canopy in row N2 obscurs far side of canopy in row N2-1
-            if H(N2, 1) < H((N2 - 1), 5): H((N2 - 1), 5) = H(N2, 1)
+            if H[N2, 0] < H[(N2 - 1), 4]: H[(N2 - 1), 4] = H[N2, 0]
             #Near side of canopy in row N2 obscurs far side of sunlit-shaded canopy boundary in row N2-1
     
     #Build array of chord areas
@@ -459,650 +457,505 @@ def fcs(OPT, Pr , row , theta , rawpsi , hc , wc , Dv , FOV , thetas , psis ) :
     for N3 in range(0,NR):
         # y As Integer
         for y in range(0,6):  #N3 Chord numbers 1 to 6
-            if H(N3, y) > 0:
-                ac(N3, y) = Chord(psi, ar, br, np.abs(H(N3, y)))
+            if H([N3, y] > 0:
+                ac[N3, y] = Chord(psi, ar, br, np.abs(H[N3, y]))
             else:
-                ac(N3, y) = Aell - Chord(psi, ar, br, np.abs(H(N3, y)))
+                ac[N3, y] = Aell - Chord(psi, ar, br, np.abs(H[N3, y]))
         
 
-#Compute areas of sunlit and shaded soil and canopy visible to radiometer
+    #Compute areas of sunlit and shaded soil and canopy visible to radiometer
 
-                                             # N4 As Integer
-                                             For N4 = 2 To (NR - 1)
+    # N4 As Integer
+    for N4 in range(1,NR - 1):
+        fc[N4, 0] = (ac[N4, 2] - ac[N4, 1]) #Sunlit canopy
+        #If fc(N4, 1) < 0 Then fc(N4, 1) = 0
+        fc[N4, 1] = (ac[N4, 0] - ac[N4, 2]) + ac[N4, 4] - ac[N4, 1] #Shaded canopy
+        #If fc(N4, 2) < 0 Then fc(N4, 2) = 0
+        fc[N4, 2] = (ac[(N4 - 1), 5] - ac[N4, 3] + ac[N4, 5] - ac[(N4 + 1), 3]) * 0.5 #Sunlit soil
+        #If fc(N4, 3) < 0 Then fc(N4, 3) = 0      
+        fc[N4, 3] = ac[N4, 3] - ac[N4, 0] + ac[N4, 1] - ac[N4, 5] #Shaded soil
+        #If fc(N4, 4) < 0 Then fc(N4, 4) = 0
+    fcr[0] = 0
+    fcr[1] = 0
+    fcr[2] = 0
+    fcr[3] = 0
+    #Sum areas for each row
+    # N5 As Integer
+    for N5 in range(1,(NR - 1)):
+        fcr[0] = fc[N5, 0] + fcr[0]
+        fcr[1] = fc[N5, 1] + fcr[1]
+        fcr[2] = fc[N5, 2] + fcr[2]
+        fcr[3] = fc[N5, 3] + fcr[3]
 
-                                                 fc(N4, 1) = (ac(N4, 3) - ac(N4, 2)) #Sunlit canopy
-    #If fc(N4, 1) < 0 Then fc(N4, 1) = 0
+    #20 fcs = H(3, OPT)
 
-                                                 fc(N4, 2) = (ac(N4, 1) - ac(N4, 3)) + ac(N4, 5) - ac(N4, 2) #Shaded canopy
-    #If fc(N4, 2) < 0 Then fc(N4, 2) = 0
+    fcs = (fcr[OPT]) / Aell
+    return fcs
+                 
+def Heighte1(Pr , theta , rawpsi , hc , wc , Dv , FOV ): 
+    #Heighte1 = Distance from center of footprint of radiometer to chord shadow
+    #   cast by near-edge of row crop canopy, where crop canopy is modelled as ELLIPSE (m)
+    #Pr = Perpendicular distance of radiometer from canopy row center (m)
+    #Theta = Zenith angle of radiometer (radians)
+    #Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
+    #   where zero is looking parallel to crop row and pi/2 is looking perpendicular
+    #   to crop row (radians)
+    #hc = Canopy height (m)
+    #wc = canopy width (m)
+    #Dv = Vertical height of radiometer relative to soil (m)
+    #FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
 
-                                                 fc(N4, 3) = (ac((N4 - 1), 6) - ac(N4, 4) + ac(N4, 6) - ac((N4 + 1), 4)) * 0.5 #Sunlit soil
-    #If fc(N4, 3) < 0 Then fc(N4, 3) = 0
+    #Constrain 45 < psi < 90
+    # psi 
+    if np.abs(rawpsi) < 45 * pi / 180:
+        psi = pi / 2 - (np.abs(rawpsi))
+    else:
+        if np.abs(rawpsi) > 135 * pi / 180:
+            psi = (np.abs(rawpsi)) - pi / 2
+        else:
+            if np.abs(rawpsi) > 90 * pi / 180:
+                psi = pi - np.abs(rawpsi)
+            else:
+                psi = np.abs(rawpsi)
+    # ac     #Horizonal axis of elliptical canopy (m)
+    # bc     #Vertical axis of elliptical canopy (m)
+    # X1     #Horizonal distance from canopy ellipse origin to radiometer (m)
+    # Y1     #Vertical distance from canopy ellipse origin to radiometer (m)
+    ac = wc / 2 / np.sin(psi)
+    bc = hc / 2
+    X1 = Pr / np.sin(psi)
+    Y1 = Dv - bc
 
-                                                 fc(N4, 4) = ac(N4, 4) - ac(N4, 1) + ac(N4, 2) - ac(N4, 6) #Shaded soil
-    #If fc(N4, 4) < 0 Then fc(N4, 4) = 0
+    #Find tantheta1, the inverse slope of tangent line from radiometer to near edge of canopy
+    # tantheta1 
+    tantheta1 = quartic1IRT(X1, Y1, ac, bc)
 
-                                             Next
+    # OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
+    OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
 
-                                             #Initialize fcr values
-fcr(1) = 0
-fcr(2) = 0
-fcr(3) = 0
-fcr(4) = 0
+    # MIN 
+    if np.abs(np.tan(rawpsi)) < 1:
+        MIN = np.tan(pi / 2 - psi)
+    else:
+        MIN = 1
+        
+    Heighte1 = Dv * tantheta1 - OC * MIN
+    return Heighte1
+                 
+def Heighte2(Pr , theta , rawpsi , hc , wc , Dv , FOV): 
 
-#Sum areas for each row
-                                             # N5 As Integer
-                                             For N5 = 2 To (NR - 1)
+    #Heighte2 = Distance from center of footprint of radiometer to chord shadow
+    #   cast by far-edge of row crop canopy, where crop canopy is modelled as ELLIPSE (m)
+    #Pr = Perpendicular distance of radiometer from canopy row center (m)
+    #Theta = Zenith angle of radiometer (radians)
+    #Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
+    #   where zero is looking parallel to crop row and pi/2 is looking perpendicular
+    #   to crop row (radians)
+    #hc = Canopy height (m)
+    #wc = canopy width (m)
+    #Dv = Vertical height of radiometer relative to soil (m)
+    #FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
+                 
+    #Constrain 45 < psi < 90
+    # psi 
+    if np.abs(rawpsi) < 45 * pi / 180:
+        psi = pi / 2 - (np.abs(rawpsi))
+    else:
+        if np.abs(rawpsi) > 135 * pi / 180:
+            psi = (np.abs(rawpsi)) - pi / 2
+        else:
+            if np.abs(rawpsi) > 90 * pi / 180:
+                psi = pi - np.abs(rawpsi)
+            else:
+                psi = np.abs(rawpsi)
 
-                                                 fcr(1) = fc(N5, 1) + fcr(1)
-                                                 fcr(2) = fc(N5, 2) + fcr(2)
-                                                 fcr(3) = fc(N5, 3) + fcr(3)
-                                                 fcr(4) = fc(N5, 4) + fcr(4)
+    # ac     #Horizonal axis of elliptical canopy (m)
+    # bc     #Vertical axis of elliptical canopy (m)
+    # X1     #Horizonal distance from canopy ellipse origin to radiometer (m)
+    # Y1     #Vertical distance from canopy ellipse origin to radiometer (m)
+    ac = wc / 2 / np.sin(psi)
+    bc = hc / 2
+    X1 = Pr / np.sin(psi)
+    Y1 = Dv - bc
 
-                                             Next
-                                             #20 fcs = H(3, OPT)
+    #Find tantheta2, the inverse slope of tangent line from radiometer to far edge of canopy
+    # tantheta2 
+    tantheta2 = quartic2IRT(X1, Y1, ac, bc)
 
-fcs = (fcr(OPT)) / Aell
+    # OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
+    OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
+    # MIN 
+    if np.abs(np.tan(rawpsi)) < 1:
+        MIN = np.tan(pi / 2 - psi)
+    else:
+        MIN = 1
 
-End def
+    Heighte2 = Dv * tantheta2 - OC * MIN
+    return Heighte2
+                 
+def Heighte3(Pr , row , theta , rawpsi , hc , wc , Dv , FOV , thetas , psis ):
+    #Heighte3 = Distance from center of footprint of radiometer to chord projected by
+    #sunlit-shaded boundary on near-side of canopy, where crop canopy is modelled as ELLIPSE (m)
+    #Pr = Perpendicular distance of radiometer from canopy row center (m)
+    #row = Crop row spacing (m)
+    #Theta = Zenith angle of radiometer (radians)
+    #Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
+    #   where zero is looking parallel to crop row and pi/2 is looking perpendicular
+    #   to crop row (radians)
+    #hc = Canopy height (m)
+    #wc = canopy width (m)
+    #Dv = Vertical height of radiometer relative to soil (m)
+    #FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
+    #thetas = Solar zenith angle (radians)
+    #psis = Solar azimuth angle relative to crop row, where zero is looking parallel to
+    #crop row and pi/2 is looking perpendicular to crop row (radians)
+                
+    #Constrain 45 < psi < 90
+    # psi 
+    if np.abs(rawpsi) < 45 * pi / 180:
+        psi = pi / 2 - (np.abs(rawpsi))
+    else:
+        if np.abs(rawpsi) > 135 * pi / 180:
+            psi = (np.abs(rawpsi)) - pi / 2
+        else:
+            if np.abs(rawpsi) > 90 * pi / 180:
+                psi = pi - np.abs(rawpsi)
+            else:
+                psi = np.abs(rawpsi)
+                 
+    # bc     #Vertical axis of elliptical canopy (m)
+    # thetasp   #Solar zenith angle perpendicular to canopy (rad)
+    # Xs     #Horizontal distance from canopy ellipse origin to tangent of sunray along thetasp (m)
+    # Ys     #Vertical distance from canopy ellipse origin to tangent of sunray along thetasp (m)
+    # X3     #Horizontal distance from radiometer to ground-projected
+    #sunlit-shaded boundary on canopy (m)
+    bc = hc / 2
+    thetasp = -thetas * np.sin(psis)
+    Xs = wc / 2 / np.sqrt(1 + (bc ** 2) / ((wc / 2) ** 2) * ((np.tan(thetasp)) ** 2))    #Xs is positive
+    Ys = -(bc ** 2) / ((wc / 2) ** 2) * Xs * np.tan(thetasp) #Ys is positive or negative
+    #Determine critical perpendicular solar zenith angle,
+    #beyond which results in adjacent row shading
+    # Xscr   #Horizontal distance from canopy ellipse origin to tangent of sunray
+    #along thetasp (m)
+    # Yscr   #Vertical distance from canopy ellipse origin to tangent of sunray
+    #along thetasp (m)
+    # thetaspcr      #Critical perpendicular solar zenith angle
 
-def Heighte1(Pr , theta , rawpsi , _
-hc , wc , Dv , FOV ) 
+    Xscr = 2 * ((wc / 2) ** 2) / row     #Xscr is positive
+    Yscr = -np.sqrt(((bc ** 2) * Xscr * (row - 2 * Xscr)) / 2 / ((wc / 2) ** 2))  #Yscr is negative
+    thetaspcr = np.atan(-((wc / 2) ** 2) * Yscr / (bc ** 2) / Xscr)   #thetascr is positive
+                 
+    if thetasp > thetaspcr:     #Shadows cast by adjacent rows and H3 is raised
+        
+        m3 = 1 / np.tan(thetasp)
+        b3 = -Ys - m3 * (row - Xs)
+        AA = (bc ** 2) + ((wc / 2) ** 2) * (m3 ** 2)
+        BB = 2 * m3 * b3 * ((wc / 2) ** 2)
+        CC = ((wc / 2) ** 2) * (b3 ** 2) - ((wc / 2) ** 2) * (bc ** 2)
+        Xs3 = (-BB + np.sqrt((BB ** 2) - 4 * AA * CC)) / (2 * AA)    #Positive root (negative root taken for H5)
+        Ys3 = m3 * Xs3 + b3
+        X3 = Dv / np.sin(psi) * ((Pr - Xs3) / (Dv - bc - Ys3))
 
-#Heighte1 = Distance from center of footprint of radiometer to chord shadow
-                                             #   cast by near-edge of row crop canopy, where crop canopy is modelled as ELLIPSE (m)
-#Pr = Perpendicular distance of radiometer from canopy row center (m)
-                                             #Theta = Zenith angle of radiometer (radians)
-#Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
-                                             #   where zero is looking parallel to crop row and pi/2 is looking perpendicular
-#   to crop row (radians)
-                                             #hc = Canopy height (m)
-#wc = canopy width (m)
-                                             #Dv = Vertical height of radiometer relative to soil (m)
-#FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
+    else:    #Compute X3 as normal (no shading by adjacent row)
+        X3 = Dv / np.sin(psi) * ((Pr - Xs) / (Dv - bc - Ys))
 
-                                             #Assign value to pi
-# pi 
-pi = 3.14159265358979
-
-#Constrain 45 < psi < 90
-                                             # psi 
-                                             If np.abs(rawpsi) < 45 * pi / 180 Then
-                                                 psi = pi / 2 - (np.abs(rawpsi))
-                                             Else
-                                                 If np.abs(rawpsi) > 135 * pi / 180 Then
-                                                     psi = (np.abs(rawpsi)) - pi / 2
-                                                 Else
-                                                     If np.abs(rawpsi) > 90 * pi / 180 Then
-                                                         psi = pi - np.abs(rawpsi)
-                                                     Else
-                                                         psi = np.abs(rawpsi)
-                                                     End If
-                                                 End If
-                                             End If
-
-                                             # ac     #Horizonal axis of elliptical canopy (m)
-# bc     #Vertical axis of elliptical canopy (m)
-                                             # X1     #Horizonal distance from canopy ellipse origin to radiometer (m)
-# Y1     #Vertical distance from canopy ellipse origin to radiometer (m)
-                                             ac = wc / 2 / np.sin(psi)
-                                             bc = hc / 2
-                                             X1 = Pr / np.sin(psi)
-                                             Y1 = Dv - bc
-
-                                             #Find tantheta1, the inverse slope of tangent line from radiometer to near edge of canopy
-# tantheta1 
-tantheta1 = quartic1IRT(X1, Y1, ac, bc)
-
-# OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
-                                             OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
-
-                                             # MIN 
-                                             If np.abs(np.tan(rawpsi)) < 1 Then
-                                             MIN = np.tan(pi / 2 - psi)
-                                             Else
-                                             MIN = 1
-                                             End If
-
-                                             Heighte1 = Dv * tantheta1 - OC * MIN
-
-                                             End def
-                                             def Heighte2(Pr , theta , rawpsi , _
-                                                               hc , wc , Dv , FOV ) 
-
-                                             #Heighte2 = Distance from center of footprint of radiometer to chord shadow
-#   cast by far-edge of row crop canopy, where crop canopy is modelled as ELLIPSE (m)
-                                             #Pr = Perpendicular distance of radiometer from canopy row center (m)
-#Theta = Zenith angle of radiometer (radians)
-                                             #Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
-#   where zero is looking parallel to crop row and pi/2 is looking perpendicular
-                                             #   to crop row (radians)
-#hc = Canopy height (m)
-                                             #wc = canopy width (m)
-#Dv = Vertical height of radiometer relative to soil (m)
-                                             #FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
-
-#Assign value to pi
-                                             # pi 
-                                             pi = 3.14159265358979
-
-                                             #Constrain 45 < psi < 90
-# psi 
-If np.abs(rawpsi) < 45 * pi / 180 Then
-    psi = pi / 2 - (np.abs(rawpsi))
-Else
-    If np.abs(rawpsi) > 135 * pi / 180 Then
-        psi = (np.abs(rawpsi)) - pi / 2
-    Else
-        If np.abs(rawpsi) > 90 * pi / 180 Then
-            psi = pi - np.abs(rawpsi)
-        Else
-            psi = np.abs(rawpsi)
-        End If
-    End If
-End If
-
-# ac     #Horizonal axis of elliptical canopy (m)
-                                             # bc     #Vertical axis of elliptical canopy (m)
-# X1     #Horizonal distance from canopy ellipse origin to radiometer (m)
-                                             # Y1     #Vertical distance from canopy ellipse origin to radiometer (m)
-ac = wc / 2 / np.sin(psi)
-bc = hc / 2
-X1 = Pr / np.sin(psi)
-Y1 = Dv - bc
-
-#Find tantheta2, the inverse slope of tangent line from radiometer to far edge of canopy
-                                             # tantheta2 
-                                             tantheta2 = quartic2IRT(X1, Y1, ac, bc)
-
-                                             # OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
-OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
-
-# MIN 
-If np.abs(np.tan(rawpsi)) < 1 Then
-MIN = np.tan(pi / 2 - psi)
-Else
-MIN = 1
-End If
-
-Heighte2 = Dv * tantheta2 - OC * MIN
-
-End def
-def Heighte3(Pr , row , theta , rawpsi , _
-hc , wc , Dv , FOV , _
-thetas , psis ) 
-
-#Heighte3 = Distance from center of footprint of radiometer to chord projected by
-                                             #sunlit-shaded boundary on near-side of canopy, where crop canopy is modelled as ELLIPSE (m)
-#Pr = Perpendicular distance of radiometer from canopy row center (m)
-                                             #row = Crop row spacing (m)
-#Theta = Zenith angle of radiometer (radians)
-                                             #Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
-#   where zero is looking parallel to crop row and pi/2 is looking perpendicular
-                                             #   to crop row (radians)
-#hc = Canopy height (m)
-                                             #wc = canopy width (m)
-#Dv = Vertical height of radiometer relative to soil (m)
-                                             #FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
-#thetas = Solar zenith angle (radians)
-                                             #psis = Solar azimuth angle relative to crop row, where zero is looking parallel to
-#crop row and pi/2 is looking perpendicular to crop row (radians)
-
-                                             #Assign value to pi
-# pi 
-pi = 3.14159265358979
-
-#Constrain 45 < psi < 90
-                                             # psi 
-                                             If np.abs(rawpsi) < 45 * pi / 180 Then
-                                                 psi = pi / 2 - (np.abs(rawpsi))
-                                             Else
-                                                 If np.abs(rawpsi) > 135 * pi / 180 Then
-                                                     psi = (np.abs(rawpsi)) - pi / 2
-                                                 Else
-                                                     If np.abs(rawpsi) > 90 * pi / 180 Then
-                                                         psi = pi - np.abs(rawpsi)
-                                                     Else
-                                                         psi = np.abs(rawpsi)
-                                                     End If
-                                                 End If
-                                             End If
-
-                                             # bc     #Vertical axis of elliptical canopy (m)
-# thetasp   #Solar zenith angle perpendicular to canopy (rad)
-                                             # Xs     #Horizontal distance from canopy ellipse origin to tangent of sunray along thetasp (m)
-# Ys     #Vertical distance from canopy ellipse origin to tangent of sunray along thetasp (m)
-                                             # X3     #Horizontal distance from radiometer to ground-projected
-#sunlit-shaded boundary on canopy (m)
-                                             bc = hc / 2
-                                             thetasp = -thetas * np.sin(psis)
-                                             Xs = wc / 2 / np.sqrt(1 + (bc ** 2) / ((wc / 2) ** 2) * ((np.tan(thetasp)) ** 2))    #Xs is positive
-Ys = -(bc ** 2) / ((wc / 2) ** 2) * Xs * np.tan(thetasp) #Ys is positive or negative
-
-                                             #Determine critical perpendicular solar zenith angle,
-#beyond which results in adjacent row shading
-                                             # Xscr   #Horizontal distance from canopy ellipse origin to tangent of sunray
-#along thetasp (m)
-                                             # Yscr   #Vertical distance from canopy ellipse origin to tangent of sunray
-#along thetasp (m)
-                                             # thetaspcr      #Critical perpendicular solar zenith angle
-
-Xscr = 2 * ((wc / 2) ** 2) / row     #Xscr is positive
-                                             Yscr = -np.sqrt(((bc ** 2) * Xscr * (row - 2 * Xscr)) / 2 / ((wc / 2) ** 2))  #Yscr is negative
-thetaspcr = np.atan(-((wc / 2) ** 2) * Yscr / (bc ** 2) / Xscr)   #thetascr is positive
-
-                                             If thetasp > thetaspcr Then     #Shadows cast by adjacent rows and H3 is raised
+    # OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
+    OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
+            
+    if np.abs(np.tan(rawpsi)) < 1:
+        MIN = np.tan(pi / 2 - psi)
+    else:
+        MIN = 1
     
-    # m3 
-    # b3 
-    # AA 
-    # BB 
-    # CC 
-    # Xs3 
-    # Ys3 
-    
-    m3 = 1 / np.tan(thetasp)
-    b3 = -Ys - m3 * (row - Xs)
-    AA = (bc ** 2) + ((wc / 2) ** 2) * (m3 ** 2)
-    BB = 2 * m3 * b3 * ((wc / 2) ** 2)
-    CC = ((wc / 2) ** 2) * (b3 ** 2) - ((wc / 2) ** 2) * (bc ** 2)
-    Xs3 = (-BB + np.sqrt((BB ** 2) - 4 * AA * CC)) / (2 * AA)    #Positive root (negative root taken for H5)
-                                                 Ys3 = m3 * Xs3 + b3
-                                                 X3 = Dv / np.sin(psi) * ((Pr - Xs3) / (Dv - bc - Ys3))
+    Heighte3 = X3 - OC * MIN
+    return Heighte4
+                 
+def Heighte4(Pr , row , theta , rawpsi , hc , wc , Dv , FOV , thetas , psis ): 
+    #Heighte4 = Distance from center of footprint of radiometer to chord projected by
+    #sunlit-shaded soil boundary on near-side of canopy, where crop canopy is modelled as ELLIPSE (m)
+    #Pr = Perpendicular distance of radiometer from canopy row center (m)
+    #row = Crop row spacing (m)
+    #Theta = Zenith angle of radiometer (radians)
+    #Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
+    #   where zero is looking parallel to crop row and pi/2 is looking perpendicular
+    #   to crop row (radians)
+    #hc = Canopy height (m)
+    #wc = canopy width (m)
+    #Dv = Vertical height of radiometer relative to soil (m)
+    #FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
+    #thetas = Solar zenith angle (radians)
+    #psis = Solar azimuth angle relative to crop row, where zero is looking parallel to
+    #crop row and pi/2 is looking perpendicular to crop row (radians)
+                
+                
+    #Constrain 45 < psi < 90
+    # psi 
+    if np.abs(rawpsi) < 45 * pi / 180:
+        psi = pi / 2 - (np.abs(rawpsi))
+    else:
+        if np.abs(rawpsi) > 135 * pi / 180:
+            psi = (np.abs(rawpsi)) - pi / 2
+        else:
+            if np.abs(rawpsi) > 90 * pi / 180:
+                psi = pi - np.abs(rawpsi)
+            else:
+                psi = np.abs(rawpsi)
 
-                                             Else    #Compute X3 as normal (no shading by adjacent row)
-    
-    X3 = Dv / np.sin(psi) * ((Pr - Xs) / (Dv - bc - Ys))
+    # bc     #Vertical axis of elliptical canopy (m)
+    # thetasp   #Solar zenith angle perpendicular to canopy (rad)
+    # Xs     #Horizontal distance from canopy ellipse origin to tangent of sunray along thetasp (m)
+    # Ys     #Vertical distance from canopy ellipse origin to tangent of sunray along thetasp (m)
+    # X4     #Horizontal distance from radiometer to ground-projected
+    #sunlit-shaded soil boundary on near-side of canopy (m)
+    bc = hc / 2
+    thetasp = -thetas * np.sin(psis)
+    Xs = wc / 2 / np.sqrt(1 + (bc ** 2) / ((wc / 2) ** 2) * ((np.tan(thetasp)) ** 2))
+    Ys = -(bc ** 2) / ((wc / 2) ** 2) * Xs * np.tan(thetasp)
+    X4 = (Pr - Xs + (np.tan(thetasp)) * (bc + Ys)) / np.sin(psi)
+                 
+    # OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
+    OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
+                 
+    # MIN 
+    if np.abs(np.tan(rawpsi)) < 1:
+        MIN = np.tan(pi / 2 - psi)
+    else:
+        MIN = 1
 
-End If
+    Heighte4 = X4 - OC * MIN
+    return Heighte4
 
-# OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
-                                             OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
+def Heighte5(Pr , row , theta , rawpsi , hc , wc , Dv , FOV , thetas , psis ): 
+    #Heighte5 = Distance from center of footprint of radiometer to chord projected by
+    #sunlit-shaded boundary on far-side of canopy, where crop canopy is modelled as ELLIPSE (m)
+    #Pr = Perpendicular distance of radiometer from canopy row center (m)
+    #row = Crop row spacing (m)
+    #Theta = Zenith angle of radiometer (radians)
+    #Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
+    #   where zero is looking parallel to crop row and pi/2 is looking perpendicular
+    #   to crop row (radians)
+    #hc = Canopy height (m)
+    #wc = canopy width (m)
+    #Dv = Vertical height of radiometer relative to soil (m)
+    #FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
+    #thetas = Solar zenith angle (radians)
+    #psis = Solar azimuth angle relative to crop row, where zero is looking parallel to
+    #crop row and pi/2 is looking perpendicular to crop row (radians)
+                
+    #Constrain 45 < psi < 90
+    # psi 
+    if np.abs(rawpsi) < 45 * pi / 180:
+        psi = pi / 2 - (np.abs(rawpsi))
+    else:
+        if np.abs(rawpsi) > 135 * pi / 180:
+            psi = (np.abs(rawpsi)) - pi / 2
+        else:
+            if np.abs(rawpsi) > 90 * pi / 180:
+                psi = pi - np.abs(rawpsi)
+            else:
+                psi = np.abs(rawpsi)
 
-                                             # MIN 
-                                             If np.abs(np.tan(rawpsi)) < 1 Then
-                                             MIN = np.tan(pi / 2 - psi)
-                                             Else
-                                             MIN = 1
-                                             End If
-
-                                             Heighte3 = X3 - OC * MIN
-
-                                             End def
-
-                                             def Heighte4(Pr , row , theta , rawpsi , _
-                                                               hc , wc , Dv , FOV , _
-                                                               thetas , psis ) 
-
-                                             #Heighte4 = Distance from center of footprint of radiometer to chord projected by
-#sunlit-shaded soil boundary on near-side of canopy, where crop canopy is modelled as ELLIPSE (m)
-                                             #Pr = Perpendicular distance of radiometer from canopy row center (m)
-#row = Crop row spacing (m)
-                                             #Theta = Zenith angle of radiometer (radians)
-#Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
-                                             #   where zero is looking parallel to crop row and pi/2 is looking perpendicular
-#   to crop row (radians)
-                                             #hc = Canopy height (m)
-#wc = canopy width (m)
-                                             #Dv = Vertical height of radiometer relative to soil (m)
-#FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
-                                             #thetas = Solar zenith angle (radians)
-#psis = Solar azimuth angle relative to crop row, where zero is looking parallel to
-                                             #crop row and pi/2 is looking perpendicular to crop row (radians)
-
-#Assign value to pi
-                                             # pi 
-                                             pi = 3.14159265358979
-
-                                             #Constrain 45 < psi < 90
-# psi 
-If np.abs(rawpsi) < 45 * pi / 180 Then
-    psi = pi / 2 - (np.abs(rawpsi))
-Else
-    If np.abs(rawpsi) > 135 * pi / 180 Then
-        psi = (np.abs(rawpsi)) - pi / 2
-    Else
-        If np.abs(rawpsi) > 90 * pi / 180 Then
-            psi = pi - np.abs(rawpsi)
-        Else
-            psi = np.abs(rawpsi)
-        End If
-    End If
-End If
-
-# bc     #Vertical axis of elliptical canopy (m)
-                                             # thetasp   #Solar zenith angle perpendicular to canopy (rad)
-# Xs     #Horizontal distance from canopy ellipse origin to tangent of sunray along thetasp (m)
-                                             # Ys     #Vertical distance from canopy ellipse origin to tangent of sunray along thetasp (m)
-# X4     #Horizontal distance from radiometer to ground-projected
-                                             #sunlit-shaded soil boundary on near-side of canopy (m)
-bc = hc / 2
-thetasp = -thetas * np.sin(psis)
-Xs = wc / 2 / np.sqrt(1 + (bc ** 2) / ((wc / 2) ** 2) * ((np.tan(thetasp)) ** 2))
-Ys = -(bc ** 2) / ((wc / 2) ** 2) * Xs * np.tan(thetasp)
-X4 = (Pr - Xs + (np.tan(thetasp)) * (bc + Ys)) / np.sin(psi)
-
-# OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
-                                             OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
-
-                                             # MIN 
-                                             If np.abs(np.tan(rawpsi)) < 1 Then
-                                             MIN = np.tan(pi / 2 - psi)
-                                             Else
-                                             MIN = 1
-                                             End If
-
-                                             Heighte4 = X4 - OC * MIN
-
-                                             End def
-                                             def Heighte5(Pr , row , theta , rawpsi , _
-                                                               hc , wc , Dv , FOV , _
-                                                               thetas , psis ) 
-
-                                             #Heighte5 = Distance from center of footprint of radiometer to chord projected by
-#sunlit-shaded boundary on far-side of canopy, where crop canopy is modelled as ELLIPSE (m)
-                                             #Pr = Perpendicular distance of radiometer from canopy row center (m)
-#row = Crop row spacing (m)
-                                             #Theta = Zenith angle of radiometer (radians)
-#Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
-                                             #   where zero is looking parallel to crop row and pi/2 is looking perpendicular
-#   to crop row (radians)
-                                             #hc = Canopy height (m)
-#wc = canopy width (m)
-                                             #Dv = Vertical height of radiometer relative to soil (m)
-#FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
-                                             #thetas = Solar zenith angle (radians)
-#psis = Solar azimuth angle relative to crop row, where zero is looking parallel to
-                                             #crop row and pi/2 is looking perpendicular to crop row (radians)
-
-#Assign value to pi
-                                             # pi 
-                                             pi = 3.14159265358979
-
-                                             #Constrain 45 < psi < 90
-# psi 
-If np.abs(rawpsi) < 45 * pi / 180 Then
-    psi = pi / 2 - (np.abs(rawpsi))
-Else
-    If np.abs(rawpsi) > 135 * pi / 180 Then
-        psi = (np.abs(rawpsi)) - pi / 2
-    Else
-        If np.abs(rawpsi) > 90 * pi / 180 Then
-            psi = pi - np.abs(rawpsi)
-        Else
-            psi = np.abs(rawpsi)
-        End If
-    End If
-End If
-
-# bc     #Vertical axis of elliptical canopy (m)
-                                             # thetasp   #Solar zenith angle perpendicular to canopy (rad)
-# Xs     #Horizontal distance from canopy ellipse origin to tangent of sunray along thetasp (m)
-                                             # Ys     #Vertical distance from canopy ellipse origin to tangent of sunray along thetasp (m)
-# X5     #Horizontal distance from radiometer to ground-projected
+    # bc     #Vertical axis of elliptical canopy (m)
+    # thetasp   #Solar zenith angle perpendicular to canopy (rad)
+    # Xs     #Horizontal distance from canopy ellipse origin to tangent of sunray along thetasp (m)
+    # Ys     #Vertical distance from canopy ellipse origin to tangent of sunray along thetasp (m)
+    # X5     #Horizontal distance from radiometer to ground-projected
                                              #sunlit-shaded boundary on canopy (m)
-bc = hc / 2
-thetasp = -thetas * np.sin(psis)
-Xs = -wc / 2 / np.sqrt(1 + (bc ** 2) / ((wc / 2) ** 2) * ((np.tan(thetasp)) ** 2)) #Xs is negative (positive for H3)
-                                             Ys = -(bc ** 2) / ((wc / 2) ** 2) * Xs * np.tan(thetasp) #Ys is positive or negative
+    bc = hc / 2
+    thetasp = -thetas * np.sin(psis)
+    Xs = -wc / 2 / np.sqrt(1 + (bc ** 2) / ((wc / 2) ** 2) * ((np.tan(thetasp)) ** 2)) #Xs is negative (positive for H3)
+    Ys = -(bc ** 2) / ((wc / 2) ** 2) * Xs * np.tan(thetasp) #Ys is positive or negative
 
-#Determine critical perpendicular solar zenith angle,
-                                             #beyond which results in adjacent row shading
-# Xscr   #Horizontal distance from canopy ellipse origin to tangent of sunray
-                                             #along thetasp (m)
-# Yscr   #Vertical distance from canopy ellipse origin to tangent of sunray
-                                             #along thetasp (m)
-# thetaspcr      #Critical perpendicular solar zenith angle
+    #Determine critical perpendicular solar zenith angle,
+    #beyond which results in adjacent row shading
+    # Xscr   #Horizontal distance from canopy ellipse origin to tangent of sunray
+    #along thetasp (m)
+    # Yscr   #Vertical distance from canopy ellipse origin to tangent of sunray
+    #along thetasp (m)
+    # thetaspcr      #Critical perpendicular solar zenith angle
 
-                                             Xscr = -2 * ((wc / 2) ** 2) / row     #Xscr is negative (positive for H3)
-Yscr = -np.sqrt(((bc ** 2) * Xscr * (row + 2 * Xscr)) / -2 / ((wc / 2) ** 2))  #Yscr is negative; note -2 and row+2*Xscr
-                                             thetaspcr = np.atan(-((wc / 2) ** 2) * Yscr / (bc ** 2) / Xscr)   #thetascr is negative
+    Xscr = -2 * ((wc / 2) ** 2) / row     #Xscr is negative (positive for H3)
+    Yscr = -np.sqrt(((bc ** 2) * Xscr * (row + 2 * Xscr)) / -2 / ((wc / 2) ** 2))  #Yscr is negative; note -2 and row+2*Xscr
+    thetaspcr = np.atan(-((wc / 2) ** 2) * Yscr / (bc ** 2) / Xscr)   #thetascr is negative
 
-If thetasp < thetaspcr Then     #Shadows cast by adjacent rows and H5 is raised.
-                                             #NOTE: thetascr is negative (thetascr for H3 is positive)
-    
-    # m5 
-    # b5 
-    # AA 
-    # BB 
-    # CC 
-    # Xs5 
-    # Ys5 
-    
-    m5 = 1 / np.tan(thetasp)
-    b5 = -Ys + m5 * (row + Xs) #NOTE: signs are negative for H3
-                                                 AA = (bc ** 2) + ((wc / 2) ** 2) * (m5 ** 2)
-                                                 BB = 2 * m5 * b5 * ((wc / 2) ** 2)
-                                                 CC = ((wc / 2) ** 2) * (b5 ** 2) - ((wc / 2) ** 2) * (bc ** 2)
-                                                 Xs5 = (-BB - np.sqrt((BB ** 2) - 4 * AA * CC)) / (2 * AA)    #NOTE: Negative root (H3 positive)
-    Ys5 = m5 * Xs5 + b5
-    X5 = Dv / np.sin(psi) * ((Pr - Xs5) / (Dv - bc - Ys5))
+    if thetasp < thetaspcr:     #Shadows cast by adjacent rows and H5 is raised.
+                 #NOTE: thetascr is negative (thetascr for H3 is positive)
+        
+        m5 = 1 / np.tan(thetasp)
+        b5 = -Ys + m5 * (row + Xs) #NOTE: signs are negative for H3
+        AA = (bc ** 2) + ((wc / 2) ** 2) * (m5 ** 2)
+        BB = 2 * m5 * b5 * ((wc / 2) ** 2)
+        CC = ((wc / 2) ** 2) * (b5 ** 2) - ((wc / 2) ** 2) * (bc ** 2)
+        Xs5 = (-BB - np.sqrt((BB ** 2) - 4 * AA * CC)) / (2 * AA)    #NOTE: Negative root (H3 positive)
+        Ys5 = m5 * Xs5 + b5
+        X5 = Dv / np.sin(psi) * ((Pr - Xs5) / (Dv - bc - Ys5))
 
-Else    #Compute X5 as normal (no shading by adjacent row)
+    else:    #Compute X5 as normal (no shading by adjacent row)
 
-                                                 X5 = Dv / np.sin(psi) * ((Pr - Xs) / (Dv - bc - Ys))
+        X5 = Dv / np.sin(psi) * ((Pr - Xs) / (Dv - bc - Ys))
 
-                                             End If
+    # OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
+    OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
+                 
+    if np.abs(np.tan(rawpsi)) < 1:
+        MIN = np.tan(pi / 2 - psi)
+    else:
+        MIN = 1
 
-                                             # OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
-OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
+    Heighte5 = X5 - OC * MIN
+    return Heighte5
+                 
+def Heighte6(Pr , row , theta , rawpsi , hc , wc , Dv , FOV , thetas , psis ):
+    #Heighte6 = Distance from center of footprint of radiometer to chord projected by
+    #sunlit-shaded soil boundary on far-side of canopy, where crop canopy is modelled as ELLIPSE (m)
+    #Pr = Perpendicular distance of radiometer from canopy row center (m)
+    #row = Crop row spacing (m)
+    #Theta = Zenith angle of radiometer (radians)
+    #Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
+    #   where zero is looking parallel to crop row and pi/2 is looking perpendicular
+    #   to crop row (radians)
+    #hc = Canopy height (m)
+    #wc = canopy width (m)
+    #Dv = Vertical height of radiometer relative to soil (m)
+    #FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
+    #thetas = Solar zenith angle (radians)
+    #psis = Solar azimuth angle relative to crop row, where zero is looking parallel to
+    #crop row and pi/2 is looking perpendicular to crop row (radians)
+    #Constrain 45 < psi < 90
+    # psi 
+    if np.abs(rawpsi) < 45 * pi / 180:
+        psi = pi / 2 - (np.abs(rawpsi))
+    else:
+        if np.abs(rawpsi) > 135 * pi / 180:
+            psi = (np.abs(rawpsi)) - pi / 2
+        else:
+            if np.abs(rawpsi) > 90 * pi / 180:
+                psi = pi - np.abs(rawpsi)
+            else:
+                psi = np.abs(rawpsi)
 
-# MIN 
-If np.abs(np.tan(rawpsi)) < 1 Then
-MIN = np.tan(Pi / 2 - psi)
-Else
-MIN = 1
-End If
+    # bc     #Vertical axis of elliptical canopy (m)
+    # thetasp   #Solar zenith angle perpendicular to canopy (rad)
+    # Xs     #Horizontal distance from canopy ellipse origin to tangent of sunray along thetasp (m)
+    # Ys     #Vertical distance from canopy ellipse origin to tangent of sunray along thetasp (m)
+    # X6     #Horizontal distance from radiometer to ground-projected
+    #sunlit-shaded soil boundary on near-side of canopy (m)
+    bc = hc / 2
+    thetasp = -thetas * np.sin(psis)
+    Xs = -wc / 2 / np.sqrt(1 + (bc ** 2) / ((wc / 2) ** 2) * ((np.tan(thetasp)) ** 2))    #NOTE: negative sign (H4 positive)
+    Ys = -(bc ** 2) / ((wc / 2) ** 2) * Xs * np.tan(thetasp)
+    X6 = (Pr - Xs + (np.tan(thetasp)) * (bc + Ys)) / np.sin(psi)
 
-Heighte5 = X5 - OC * MIN
+    # OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
+    OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
 
-End def
-def Heighte6(Pr , row , theta , rawpsi , _
-hc , wc , Dv , FOV , _
-thetas , psis ) 
+     
+    if np.abs(np.tan(rawpsi)) < 1:
+        MIN = np.tan(pi / 2 - psi)
+    else:
+        MIN = 1
 
-#Heighte46 = Distance from center of footprint of radiometer to chord projected by
-                                             #sunlit-shaded soil boundary on far-side of canopy, where crop canopy is modelled as ELLIPSE (m)
-#Pr = Perpendicular distance of radiometer from canopy row center (m)
-                                             #row = Crop row spacing (m)
-#Theta = Zenith angle of radiometer (radians)
-                                             #Rawpsi = Azimuth angel of crop row relative to radiometer view angle,
-#   where zero is looking parallel to crop row and pi/2 is looking perpendicular
-                                             #   to crop row (radians)
-#hc = Canopy height (m)
-                                             #wc = canopy width (m)
-#Dv = Vertical height of radiometer relative to soil (m)
-                                             #FOV = Field of view number of radiometer (e.g., 2:1 FOV would be specified as "2")
-#thetas = Solar zenith angle (radians)
-                                             #psis = Solar azimuth angle relative to crop row, where zero is looking parallel to
-#crop row and pi/2 is looking perpendicular to crop row (radians)
+    Heighte6 = X6 - OC * MIN
+    return Heighte6
 
-                                             #Assign value to pi
-# pi 
-pi = 3.14159265358979
+def quartic1IRT(X1 , Y1 , ac , bc ): 
+    #Compute the 1st root of a quartic equation of form
+    #Ax**4 + Bx**3 + Cx**2 + Dx + E = 0
+    #Compute coefficients of quartic
+    A = (Y1 ** 2) * (bc ** 2) - (bc ** 4)
+    b = -2 * X1 * Y1 * (bc ** 2)
+    c = (Y1 ** 2) * (ac ** 2) + (X1 ** 2) * (bc ** 2) - 2 * (ac ** 2) * (bc ** 2)
+    d = -2 * X1 * Y1 * (ac ** 2)
+    E = (X1 ** 2) * (ac ** 2) - (ac ** 4)
 
-#Constrain 45 < psi < 90
-                                             # psi 
-                                             If np.abs(rawpsi) < 45 * pi / 180 Then
-                                                 psi = pi / 2 - (np.abs(rawpsi))
-                                             Else
-                                                 If np.abs(rawpsi) > 135 * pi / 180 Then
-                                                     psi = (np.abs(rawpsi)) - pi / 2
-                                                 Else
-                                                     If np.abs(rawpsi) > 90 * pi / 180 Then
-                                                         psi = pi - np.abs(rawpsi)
-                                                     Else
-                                                         psi = np.abs(rawpsi)
-                                                     End If
-                                                 End If
-                                             End If
+    if np.abs(X1) < 0.001:     #Assume quadratic equation
+        quartic1IRT = -np.sqrt((-c + np.sqrt(c ** 2 - 4 * A * E)) / (2 * A))
+        return quartic1RT
+    #Compute quartic
+    alpha = -((3 * b ** 2) / (8 * A ** 2)) + c / A
+    beta = (b ** 3) / (8 * A ** 3) - (b * c) / (2 * A ** 2) + d / A
+    gamma = -(3 * b ** 4) / (256 * A ** 4) + (c * b ** 2) / (16 * A ** 3) - (b * d) / (4 * A ** 2) + E / A
+    P = -((alpha ** 2) / 12) - gamma
+    Q = -(alpha ** 3) / (108) + (alpha * gamma / 3) - (beta ** 2) / 8
+    r = Q / 2 + np.sqrt((Q ** 2) / 4 + (P ** 3) / 27)
+    if r < 0:
+        u = -((np.abs(r)) ** (1 / 3))
+    else:
+        u = r ** (1 / 3)
 
-                                             # bc     #Vertical axis of elliptical canopy (m)
-# thetasp   #Solar zenith angle perpendicular to canopy (rad)
-                                             # Xs     #Horizontal distance from canopy ellipse origin to tangent of sunray along thetasp (m)
-# Ys     #Vertical distance from canopy ellipse origin to tangent of sunray along thetasp (m)
-                                             # X6     #Horizontal distance from radiometer to ground-projected
-#sunlit-shaded soil boundary on near-side of canopy (m)
-                                             bc = hc / 2
-                                             thetasp = -thetas * np.sin(psis)
-                                             Xs = -wc / 2 / np.sqrt(1 + (bc ** 2) / ((wc / 2) ** 2) * ((np.tan(thetasp)) ** 2))    #NOTE: negative sign (H4 positive)
-Ys = -(bc ** 2) / ((wc / 2) ** 2) * Xs * np.tan(thetasp)
-X6 = (Pr - Xs + (np.tan(thetasp)) * (bc + Ys)) / np.sin(psi)
-
-# OC     #Horizontal distance from radiometer to center of radiometer footprint (m)
-                                             OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 / 2 / FOV)))
-
-                                             # MIN 
-                                             If np.abs(np.tan(rawpsi)) < 1 Then
-                                             MIN = np.tan(pi / 2 - psi)
-                                             Else
-                                             MIN = 1
-                                             End If
-
-                                             Heighte6 = X6 - OC * MIN
-
-                                             End def
-
-                                             def quartic1IRT(X1 , Y1 , ac , bc ) 
-                                             #Compute the 1st root of a quartic equation of form
-#Ax**4 + Bx**3 + Cx**2 + Dx + E = 0
-
-                                             # A 
-                                             # b 
-                                             # c 
-                                             # d 
-                                             # E 
-                                             # alpha 
-                                             # beta 
-                                             # gamma 
-                                             # P 
-                                             # Q 
-                                             # r 
-                                             # u 
-                                             # y 
-                                             # W 
-
-                                             #Compute coefficients of quartic
-A = (Y1 ** 2) * (bc ** 2) - (bc ** 4)
-b = -2 * X1 * Y1 * (bc ** 2)
-c = (Y1 ** 2) * (ac ** 2) + (X1 ** 2) * (bc ** 2) - 2 * (ac ** 2) * (bc ** 2)
-d = -2 * X1 * Y1 * (ac ** 2)
-E = (X1 ** 2) * (ac ** 2) - (ac ** 4)
-
-If np.abs(X1) < 0.001 Then     #Assume quadratic equation
-                                             quartic1IRT = -np.sqrt((-c + np.sqrt(c ** 2 - 4 * A * E)) / (2 * A))
-                                             GoTo 20
-                                             End If
-
-                                             #Compute quartic
-alpha = -((3 * b ** 2) / (8 * A ** 2)) + c / A
-beta = (b ** 3) / (8 * A ** 3) - (b * c) / (2 * A ** 2) + d / A
-gamma = -(3 * b ** 4) / (256 * A ** 4) + (c * b ** 2) / (16 * A ** 3) - (b * d) / (4 * A ** 2) + E / A
-P = -((alpha ** 2) / 12) - gamma
-Q = -(alpha ** 3) / (108) + (alpha * gamma / 3) - (beta ** 2) / 8
-r = Q / 2 + np.sqrt((Q ** 2) / 4 + (P ** 3) / 27)
-If r < 0 Then
-u = -((np.abs(r)) ** (1 / 3))
-Else
-u = r ** (1 / 3)
-End If
-
-# Uy 
-    If u = 0 Then
+    # Uy 
+    if u = 0:
         Uy = 0
-    Else
+    else:
         Uy = P / (3 * u)
-    End If
-y = -5 / 6 * alpha - u + Uy
-W = np.sqrt(np.abs(alpha + 2 * y))
+                 
+    y = -5 / 6 * alpha - u + Uy
+    W = np.sqrt(np.abs(alpha + 2 * y))
 
-# ZZ 
-If W = 0 Then
-    ZZ = np.abs(3 * alpha + 2 * y)
-    quartic1IRT = -(b / (4 * A)) + (W - np.sqrt(ZZ)) / 2 - y #(y subtracted to smooth curve)
-                                                 GoTo 20
-                                             Else
-                                                 ZZ = -(3 * alpha + 2 * y + 2 * beta / W)
-                                                 If ZZ < 0 Then
-                                                     ZZ = np.abs(3 * alpha + 2 * y - 2 * beta / W)
-                                                     quartic1IRT = -(b / (4 * A)) + (-W - np.sqrt(ZZ)) / 2
-                                                 Else
-                                                     quartic1IRT = -(b / (4 * A)) + (W - np.sqrt(ZZ)) / 2
-                                                 End If
-                                             End If
+    # ZZ 
+    if W = 0:
+        ZZ = np.abs(3 * alpha + 2 * y)
+        quartic1IRT = -(b / (4 * A)) + (W - np.sqrt(ZZ)) / 2 - y #(y subtracted to smooth curve)
+        return quartic1IRT
+    else:
+        ZZ = -(3 * alpha + 2 * y + 2 * beta / W)
+        if ZZ < 0:
+            ZZ = np.abs(3 * alpha + 2 * y - 2 * beta / W)
+            quartic1IRT = -(b / (4 * A)) + (-W - np.sqrt(ZZ)) / 2
+        else:
+            quartic1IRT = -(b / (4 * A)) + (W - np.sqrt(ZZ)) / 2
+        return quartic1IRT
 
-                                             20 End def
+def quartic2IRT(X1 , Y1 , ac , bc ):
+    #Compute the 2nd root of a quartic equation of form
+    #Ax**4 + Bx**3 + Cx**2 + Dx + E = 0
 
-                                             def quartic2IRT(X1 , Y1 , ac , bc ) 
-                                             #Compute the 2nd root of a quartic equation of form
-#Ax**4 + Bx**3 + Cx**2 + Dx + E = 0
+    #Compute coefficients of quartic
+    A = (Y1 ** 2) * (bc ** 2) - (bc ** 4)
+    b = -2 * X1 * Y1 * (bc ** 2)
+    c = (Y1 ** 2) * (ac ** 2) + (X1 ** 2) * (bc ** 2) - 2 * (ac ** 2) * (bc ** 2)
+    d = -2 * X1 * Y1 * (ac ** 2)
+    E = (X1 ** 2) * (ac ** 2) - (ac ** 4)
+                 
+    if np.abs(X1) < 0.001:     #Assume quadratic equation
+        quartic2IRT = np.sqrt((-c + np.sqrt(c ** 2 - 4 * A * E)) / (2 * A))
+        return quartic2IRT
+    #Compute quartic
+    alpha = -((3 * b ** 2) / (8 * A ** 2)) + c / A
+    beta = (b ** 3) / (8 * A ** 3) - (b * c) / (2 * A ** 2) + d / A
+    gamma = -(3 * b ** 4) / (256 * A ** 4) + (c * b ** 2) / (16 * A ** 3) - (b * d) / (4 * A ** 2) + E / A
+    P = -((alpha ** 2) / 12) - gamma
+    Q = -(alpha ** 3) / (108) + (alpha * gamma / 3) - (beta ** 2) / 8
+    r = Q / 2 + np.sqrt((Q ** 2) / 4 + (P ** 3) / 27)
+    if r < 0:
+        u = -((np.abs(r)) ** (1 / 3))
+    else:
+        u = r ** (1 / 3)
 
-                                             # A 
-                                             # b 
-                                             # c 
-                                             # d 
-                                             # E 
-                                             # alpha 
-                                             # beta 
-                                             # gamma 
-                                             # P 
-                                             # Q 
-                                             # r 
-                                             # u 
-                                             # y 
-                                             # W 
-
-                                             #Compute coefficients of quartic
-A = (Y1 ** 2) * (bc ** 2) - (bc ** 4)
-b = -2 * X1 * Y1 * (bc ** 2)
-c = (Y1 ** 2) * (ac ** 2) + (X1 ** 2) * (bc ** 2) - 2 * (ac ** 2) * (bc ** 2)
-d = -2 * X1 * Y1 * (ac ** 2)
-E = (X1 ** 2) * (ac ** 2) - (ac ** 4)
-
-If np.abs(X1) < 0.001 Then     #Assume quadratic equation
-                                             quartic2IRT = np.sqrt((-c + np.sqrt(c ** 2 - 4 * A * E)) / (2 * A))
-                                             GoTo 20
-                                             End If
-
-                                             #Compute quartic
-alpha = -((3 * b ** 2) / (8 * A ** 2)) + c / A
-beta = (b ** 3) / (8 * A ** 3) - (b * c) / (2 * A ** 2) + d / A
-gamma = -(3 * b ** 4) / (256 * A ** 4) + (c * b ** 2) / (16 * A ** 3) - (b * d) / (4 * A ** 2) + E / A
-P = -((alpha ** 2) / 12) - gamma
-Q = -(alpha ** 3) / (108) + (alpha * gamma / 3) - (beta ** 2) / 8
-r = Q / 2 + np.sqrt((Q ** 2) / 4 + (P ** 3) / 27)
-If r < 0 Then
-u = -((np.abs(r)) ** (1 / 3))
-Else
-u = r ** (1 / 3)
-End If
-
-# Uy 
-    If u = 0 Then
+    # Uy 
+    if u = 0:
         Uy = 0
-    Else
+    else:
         Uy = P / (3 * u)
-    End If
-y = -5 / 6 * alpha - u + Uy
-W = np.sqrt(np.abs(alpha + 2 * y))
+    
+    y = -5 / 6 * alpha - u + Uy
+    W = np.sqrt(np.abs(alpha + 2 * y))
+                 
+    # ZZ 
+    if W = 0:
+        ZZ = np.abs(3 * alpha + 2 * y)
+        quartic2IRT = -(b / (4 * A)) + (-W + np.sqrt(ZZ)) / 2 - y #(y subtracted to smooth curve)
+        return quartic2IRT
+    else:
+        ZZ = -(3 * alpha + 2 * y + 2 * beta / W)
+        if ZZ < 0:
+            ZZ = np.abs(3 * alpha + 2 * y - 2 * beta / W)
+            quartic2IRT = -(b / (4 * A)) + (-W + np.sqrt(ZZ)) / 2
+        else:
+            quartic2IRT = -(b / (4 * A)) + (W + np.sqrt(ZZ)) / 2
+        return quartic2IRT
 
-# ZZ 
-If W = 0 Then
-    ZZ = np.abs(3 * alpha + 2 * y)
-    quartic2IRT = -(b / (4 * A)) + (-W + np.sqrt(ZZ)) / 2 - y #(y subtracted to smooth curve)
-                                                 GoTo 20
-                                             Else
-                                                 ZZ = -(3 * alpha + 2 * y + 2 * beta / W)
-                                                 If ZZ < 0 Then
-                                                     ZZ = np.abs(3 * alpha + 2 * y - 2 * beta / W)
-                                                     quartic2IRT = -(b / (4 * A)) + (-W + np.sqrt(ZZ)) / 2
-                                                 Else
-                                                     quartic2IRT = -(b / (4 * A)) + (W + np.sqrt(ZZ)) / 2
-                                                 End If
-                                             End If
-
-                                             20 End def
-                                             #def chord to compute the chord area of an ellipse
+#def chord to compute the chord area of an ellipse
 def Chord(rawpsi , MAJOR , MINOR , H ) 
 
 #Assign value to pi
@@ -1528,14 +1381,14 @@ OC = Dv / 2 * (np.tan(theta + np.atan(1 / 2 / FOV)) + np.tan(theta - np.atan(1 /
                                         # N1 As Integer
                                         For N1 = 1 To NR #Row number
 
-    Pnr(N1) = Pr + (row / 2) * (2 * N1 - NR - 1)
+    Pnr[N1] = Pr + (row / 2) * (2 * N1 - NR - 1)
     
-    H(N1, 1) = Heighte1(Pnr(N1), theta, rawpsi, hc, wc, Dv, FOV)
-    H(N1, 2) = Heighte2(Pnr(N1), theta, rawpsi, hc, wc, Dv, FOV)
-    H(N1, 3) = Heighte3(Pnr(N1), row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
-    H(N1, 4) = Heighte4(Pnr(N1), row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
-    H(N1, 5) = Heighte5(Pnr(N1), row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
-    H(N1, 6) = Heighte6(Pnr(N1), row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
+    H(N1, 1) = Heighte1(Pnr[N1], theta, rawpsi, hc, wc, Dv, FOV)
+    H(N1, 2) = Heighte2(Pnr[N1], theta, rawpsi, hc, wc, Dv, FOV)
+    H(N1, 3) = Heighte3(Pnr[N1], row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
+    H(N1, 4) = Heighte4(Pnr[N1], row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
+    H(N1, 5) = Heighte5(Pnr[N1], row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
+    H(N1, 6) = Heighte6(Pnr[N1], row, theta, rawpsi, hc, wc, Dv, FOV, thetas, psis)
 
 #    tantheta(N1, 1) = (H(N1, 1) + OC * MIN) / Dv
                                         #    tantheta(N1, 2) = (H(N1, 2) + OC * MIN) / Dv
