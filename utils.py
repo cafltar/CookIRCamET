@@ -15,7 +15,7 @@ import logging
 
 pi = constants.pi
 g = constants.g #m/s2
-boltz = constant.Stefan_Boltzmann_constant# W/K4/m2
+boltz = constants.Stefan_Boltzmann# W/K4/m2
 vonk = 0.4 #Von Karman
 Tk = 273.16 #0 C
 rho_a = 1.205 #kg/m3
