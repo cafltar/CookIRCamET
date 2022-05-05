@@ -55,8 +55,8 @@ hcref = np.nan
 #zoh_bs =
 
 #soil heat flux
-#GRnday = 0.1
-#Grnnight = 0.5
+GRnday = 0.1
+Grnnight = 0.5
 
 #canopy stomatal resistance s/m
 rcday = 50
@@ -64,7 +64,8 @@ rcnight = 200
 
 #soil albedo vis/nir/wet/dry
 
-#leave absorbance/emittance/reflectance
+
+#leaf absorbance/emittance/reflectance
 
 #leaf angle param
 
@@ -79,6 +80,7 @@ def gpscapture(GPS,ts):
     # though if you don't care and instead look at the has_fix property).
     m=0
     while gpsstring is None and m<10:
+        logging.debug(str(m))
         GPS.update()
         time.sleep(ts)
         if GPS.has_fix and GPS.update():

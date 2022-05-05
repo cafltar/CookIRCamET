@@ -17,7 +17,7 @@ from flask import Flask, render_template, send_file, make_response, url_for, Res
 from multiprocessing import Pool
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 gpsPath='/home/pi/adagps_mod'
 logging.info(gpsPath)
 sys.path.insert(0,gpsPath)
@@ -27,7 +27,7 @@ import adafruit_gps
 home = os.path.join("/home","pi")
 p = os.path.join(home,'CookIRCamET','Images')
 web = os.path.join(home,'CookIRCamET','static')
-ry,rx=160,128#3840,2160
+ry,rx=960,768
 #initialise app
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -54,6 +54,9 @@ def capture():
       now = datetime.now(timezone.utc)
       current_time = now.strftime("%Y%m%d%H%M%S")
       current_spot0,current_time_fix = gpscapture(gps,ts)
+      #current_spot0 = None
+      #current_time_fix = None
+
       if current_spot0:
             current_spot = current_spot0
       else:

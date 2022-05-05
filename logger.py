@@ -21,7 +21,7 @@ from multiprocessing import Pool, Process
 
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 gpsPath='/home/pi/adagps_mod'
 logging.info(gpsPath)
 sys.path.insert(0,gpsPath)
@@ -32,7 +32,7 @@ home = os.path.join("/home","pi")
 p = os.path.join(home,'CookIRCamET','Images')
 web = os.path.join(home,'CookIRCamET','static')
 lep = os.path.join(home,'LeptonModule','software','raspberrypi_capture')
-ry,rx=160,128#3840,2160
+ry,rx=960,768#3840,2160
 #initialise app
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -49,7 +49,7 @@ gps.update()
 
 #for logger it's stationary
 current_spot,current_time_fix = gpscapture(gps,ts)
-
+#current_spot = None
 if current_spot is None:
       current_spot = 'nofix'
       
