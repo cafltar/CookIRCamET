@@ -28,7 +28,7 @@ R_d = 287.04
 #Monin-Obukhov parameters
 dhc = .67#displacement height/canopy height C&N98, K95 say 0.65
 zomhc = 0.125#momemtun roughness over canopy height K95
-sc = 1#heat roughness over momentum roughness C&N say .2, K95 say exp(-2)
+zohzom = 1#heat roughness over momentum roughness C&N say .2, K95 say exp(-2)
 
 #Measurement heights (speed and temp)
 zu = 2

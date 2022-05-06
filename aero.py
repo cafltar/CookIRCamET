@@ -84,7 +84,7 @@ def u_from_uref(hc,uz):
     #Calculate d, zom, zoh
     d = dhc * hc
     zom = zomhc * hc
-    zoh = sc * zom
+    zoh = zohzom * zom
 
     if uz < 1: uz = 1
 
@@ -98,19 +98,14 @@ def u_from_uref(hc,uz):
     return u, d, zom, zoh
     
 
-def rahmost(zu , hc , LAI , uz , hcref, Ta , Tr , nmax , tol): 
+def rahmost(hc , LAI , uz, Ta , Tr , nmax , tol): 
     #def to compute aerodynamic resistance (s/m) using Monin-Obukov (1954)
     #Similarity Theory (MOST), where correction coefficients for unstable and stable conditions
     #are given by Paulson (1970) and Webb (1970)
 
     #zu = height of wind speed measurement (m)
     #hc = canopy height (m)
-    #dhc = d/hc, where d is zero plane displacement (m)
-    #zomhc = zom/hc, where zom is roughness length for momentum transfer (m)
-    #sc = zoh/zom, where zoh is the scalar roughness length for heat diffusion
-    #LAI = Leaf area index (used in Perria aerodynamic model, m2 m-2)
     #uz = Wind speed measured at height z (m/s)
-    #hcref = Height of reference surface where wind speed was measured(m) if not used then np.nan
     #Ta = Air temperature (C)
     #Tr = Radiometric surface temperature (C)
     #nmax = Maximum number of interations
@@ -167,7 +162,7 @@ def rahmost(zu , hc , LAI , uz , hcref, Ta , Tr , nmax , tol):
         uf = vonk * u / ((np.log((zu - d) / zom)))
         rahmost = ((np.log((zu - d) / (zoh)))) / (vonk * uf)
 
-def rx(zu , hc , dhc , zomhc , sc , uz , s , LAI , row , wc , hcref ) 
+def rx(hc, uz , s , LAI , row , wc): 
     #def rx to compute resistance of heat transport between canopy and canopy
     #displacement height; taken from Norman et al. (1995) Appendix A
 
@@ -175,7 +170,7 @@ def rx(zu , hc , dhc , zomhc , sc , uz , s , LAI , row , wc , hcref )
     #hc = canopy height (m)
     #dhc = d/hc, where d is zero plane displacement (m)
     #zomhc = zom/hc, where zom is roughness length for momentum transfer (m)
-    #sc = zoh/zom, where zoh is the scalar roughness length for heat diffusion
+    #zohzom = zoh/zom, where zoh is the scalar roughness length for heat diffusion
     #z = Height above ground of wind speed measurment (m)
     #s = Effective leaf diameter (=4*Leaf area / leaf perimeter) (m)
     #LAI = Leaf area index (m2 m-2)
@@ -210,7 +205,7 @@ def rx(zu , hc , dhc , zomhc , sc , uz , s , LAI , row , wc , hcref )
     rx = (Cx / LAIL) * ((s / udz) ** 0.5)
     return rsh
     
-def rsh(uz , hcref , hc , zu , s , LAI , row , wc, Ts , Tc ) 
+def rsh(hc , zu , s , LAI , row , wc, Ts , Tc ) 
     #def rsh to compute resistance of heat transport between soil and canopy displacement height
     #Taken from Norman et al. (1995) Appendix B AND Kustas and Norman (1999)
 
@@ -220,7 +215,7 @@ def rsh(uz , hcref , hc , zu , s , LAI , row , wc, Ts , Tc )
     #dhc = d/hc, where d is zero plane displacement (m)
     #zomhc = zom/hc, where zom is roughness length for momentum transfer (m)
 
-    #sc = zoh/zom, where zoh is the scalar roughness length for heat diffusion
+    #zohzom = zoh/zom, where zoh is the scalar roughness length for heat diffusion
     #z = Height above ground of wind speed measurment (m)
     #s = Effective leaf diameter (=4*Leaf area / leaf perimeter) (m)
     #LAI = Leaf area index (m2 m-2)
@@ -256,56 +251,3 @@ def rsh(uz , hcref , hc , zu , s , LAI , row , wc, Ts , Tc )
     rsh = 1 / (c * ((np.abs(Ts - Tc)) ** (1 / 3)) + b * us)
 
     return rsh
-
-def rahRi(z , hc , dhc , zomhc , sc , nuRi , rhoa , uref , hcref, Ta , Tc ):
-    #def to calculate aerodynamic resistance (s/m) using Richardson number for stability
-    #correction (Kimball et al., 2015, Agron J 107(1): 129-141 and references therein).
-    
-    #z = height of wind speed measurement (m)
-    #hc = canopy height (m)
-    #dhc = d/hc, where d is zero plane displacement (m)
-    #zomhc = zom/hc, where zom is roughness length for momentum transfer (m)
-    #sc = zoh/zom, where zoh is the scalar roughness length for heat diffusion
-    #nuRi = empirical constant used in ASHRAE equation for low (u < 1) wind speeds
-    #rhoa = density of moist air (kg m-3)
-    #uref = Wind speed measured over reference surface at height z (m/s)
-    #hcref = Height of reference surface where wind speed was measured(m)
-    #Ta = Air temperature (C)
-    #Tc = Radiometric canopy temperature (C)
-    #i = Maximum number of interations
-    #t = Tolerance of |rahRi(n) - rahRi(n+1)| where n is the nth interation
-
-    #Variables internal to this function:
-    #d      #Zero plane displacement (m)
-    #zom    #Roughness length for momentum transfer (m)
-    #zoh    #Roughness length for heat diffusion (m)
-    #u      #Wind speed adjusted over crop ( m s-1)
-    #K      #Used to calculate PsiRi
-    #Ri     #Richardson number
-    #psiRi  #Used to determine stability condition
-
-    #Calculate d, zom, zoh
-    u, d, zom, zoh = u_from_uref(hc,uz)
-
-    #Used ASHRAE (1972, p. 40) equation to calculate rah under low wind speed,
-    #cited in Kimball et al., 2015, Agron J 107(1): 129-141
-    #if u < 1:
-    #    #dTca 
-    #    dTca = np.abs(Tc - Ta)
-    #    if dTca < 0.1: dTca = 0.1
-    #    rahRi = rhoa * 1013 / (nuRi * (dTca ** (1 / 3)))
-    if u < 1: u = 1
-
-    K = 75 * (vonk ** 2) * (((zu - d + zom) / zom) ** (1 / 2)) / ((np.log((zu - d + zom) / zom)) ** 2)
-    Ri = g * (Ta - Tc) * (zu - d) / ((Ta + Tk) * (u ** 2))
-    #rahRi = Ri
-
-    #Determine stability after Mahrt and Ek (1984)
-    if Tc < Ta:     #Stable condition, Ri is positive
-        psiRi = (1 + 15 * Ri) * ((1 + 5 * Ri) ** (1 / 2))
-    else:    #Unstable condition, Ri is negative
-        psiRi = 1 / (1 - 15 * Ri / (1 + K * ((-Ri) ** (1 / 2))))
-
-
-    rahRi = psiRi * (1 / u) * ((1 / vonk) * np.log((zu - d + zom) / zom)) ** 2
-    return rahRi
