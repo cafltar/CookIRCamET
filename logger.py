@@ -4,7 +4,7 @@
 import sys
 import numpy as np
 import cv2
-from utils import bgrcapture, ircapture, gpscapture
+from utils import ry, rx, bgrcapture, ircapture, gpscapture
 from time import sleep
 from datetime import datetime, timezone
 import os
@@ -32,7 +32,6 @@ home = os.path.join("/home","pi")
 p = os.path.join(home,'CookIRCamET','Images')
 web = os.path.join(home,'CookIRCamET','static')
 lep = os.path.join(home,'LeptonModule','software','raspberrypi_capture')
-ry,rx=960,768#3840,2160
 #initialise app
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0

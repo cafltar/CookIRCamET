@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import cv2
 import time
-from utils import *
+from constants import *
 import canopy, aero
 from time import sleep
 from datetime import datetime
@@ -10,21 +10,25 @@ import os
 import numpy as np
 import logging 
 
-def G(Rns,Rnr):
+def G(Rn):   
+    if Rn < 0:
+        return Rn * GRnday
+    else:
+        return Rn * GRnnight
+    
+def LE(H,Rn,G):
+    return Rn-G-H
+def LEc(Hc,Rnc):
+    return Rnc-Hc
+def LEs(Rns,Hs,Gn):
+    return Rns-Hs-Gn
 
-def LEc():
-
-def LEs():
-
-def LEr():
-
-def H():
-
-def Hc():
-
-def Hs():
-
-def Hr():
+def H(Tac,Ta,ra):
+    return aero.rho_a(Tac)*(Tac-Ta)/ra*c_p
+def Hc(Tac,Tc,rx):
+    return aero.rho_a(Tac)*(Tc-Tac)/rx*c_p
+def Hs(Tac,Ta,ra,fs):
+    return aero.rho_a(Tac)*(Ts-Tac)/rs*c_p
 
 def Lsky(P , Ta , HP , eaOPT ): 
     #def Lsky to calculate hemispherical downwelling longwave irradiance from the sky (W m-2).
@@ -33,9 +37,6 @@ def Lsky(P , Ta , HP , eaOPT ):
     #HP = Humidity parameter, depends on eaOPT
     #eaOPT = Option to specify which humidity paramater is used
     #           to compute actual vapor pressure of the air (ea, kPa)
-    #           eaOPT = 1: RH (%) is used
-    #           eaOPT = 2: Twet (%) is used
-    #           eaOPT = 3: Tdew (%) is used
 
     #Variable definitions internal to this function
     #ea1     #Actual vapor pressure of the air (kPa)
@@ -52,7 +53,7 @@ def Lsky(P , Ta , HP , eaOPT ):
 
     return emisatm * boltz * ((Ta + Tk) ** 4)   
 
-def Lnsoil(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT , emissoil , emisveg , LWext , fdhc ): 
+def Lns(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT, fdhc, fres, fsoil): 
     #def Lnsoil to compute the net longwave radiation to the SOIL using the
     #fdhc VIEW FACTOR model (W m-2).
 
@@ -69,9 +70,9 @@ def Lnsoil(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT , emissoil , emisveg ,
     #           eaOPT = 1: RH (%) is used
     #           eaOPT = 2: Twet (%) is used
     #           eaOPT = 3: Tdew (%) is used
-    #emissoil = Longwave emittance of the soil
+    #emisSoil = Longwave emittance of the soil
     #emisveg = Longwave emittance of the canopy
-    #LWext = Longwave extinction coefficient of the canopy
+    #kappair = Longwave extinction coefficient of the canopy
     #fdhc = downward hemispherical canopy view factor
 
     #Variable definitions internal to this function
@@ -81,24 +82,21 @@ def Lnsoil(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT , emissoil , emisveg ,
     # Lsky   #Incoming longwave radiation from sky (W m-2)
     # Lc     #Longwave radiation from canopy (W m-2)
     # Ls     #Longwave radiation from soil (W m-2)
-    # LWEXP  #np.exponential extinction of longwave radiation
+    # lwexp  #np.exponential extinction of longwave radiation
 
     #Convert field LAI to local LAI
     # LAIL   #Local LAI (i.e., within vegeation row) (m2 m-2)
     LAIL = LAI * row / wc
     Lc = emisveg * boltz * ((Tc + Tk) ** 4)
-    Ls = emissoil * boltz * ((Ts + Tk) ** 4)
-    LWEXP = np.exp(-LWext * LAIL)
+    Ls = emisSoil * boltz * ((Ts + Tk) ** 4)
+    lwexp = np.exp(-kappIr * LAIL)
+    
+    return emisSoil * Lsky(P , Ta , HP , eaOPT) * (1 - fdhc + fdhc * lwexp) + emisSoil * Lc * fdhc * (1 - lwexp) - Ls
 
-    return emissoil * Lsky(P , Ta , HP , eaOPT) * (1 - fdhc + fdhc * LWEXP) + emissoil * Lc * fdhc * (1 - LWEXP) - Ls
+    #LnsoilV = emisSoil * Lsky * (1 - wc / row + wc / row * lwexp) + 
+    #emisSoil * Lc * wc / row * (1 - lwexp) - Ls
 
-    #LnsoilV = emissoil * Lsky * (1 - wc / row + wc / row * LWEXP) + 
-    #emissoil * Lc * wc / row * (1 - LWEXP) - Ls
-
-def Lnres(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT , emissoil , emisveg , LWext , fdhc ): 
-    return None
-
-def Lncanopy(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT , emissoil , emisveg , LWext , fdhc ) :
+def Lnc(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT , fdhc ) :
     #def Lncanopy to compute the net longwave radiation to the CANOPY using the
     #VERTICAL VIEW FACTOR radiation model (W m-2).
 
@@ -115,9 +113,9 @@ def Lncanopy(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT , emissoil , emisveg
     #           eaOPT = 1: RH (%) is used
     #           eaOPT = 2: Twet (%) is used
     #           eaOPT = 3: Tdew (%) is used
-    #emissoil = Longwave emittance of the soil
+    #emisSoil = Longwave emittance of the soil
     #emisveg = Longwave emittance of the canopy
-    #LWext = Longwave extinction coefficient of the canopy
+    #kappIr = Longwave extinction coefficient of the canopy
     #fdhc = downward hemispherical canopy view factor
 
     #Variable definitions internal to this function
@@ -127,28 +125,26 @@ def Lncanopy(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT , emissoil , emisveg
     # Lsky   #Incoming longwave radiation from sky (W m-2)
     # Lc     #Longwave radiation from canopy (W m-2)
     # Ls     #Longwave radiation from soil (W m-2)
-    # LWEXP  #np.exponential extinction of longwave radiation
+    # lwexp  #np.exponential extinction of longwave radiation
 
     #Convert field LAI to local LAI
     # LAIL   #Local LAI (i.e., within vegeation row) (m2 m-2)
     LAIL = LAI * row / wc
     Lc = emisveg * boltz * ((Tc + Tk) ** 4)
-    Ls = emissoil * boltz * ((Ts + Tk) ** 4)
-    LWEXP = np.exp(-LWext * LAIL)
+    Ls = emisSoil * boltz * ((Ts + Tk) ** 4)
+    lwexp = np.exp(-kappIr * LAIL)
 
-    return (emisveg * Lsky(P , Ta , HP , eaOPT) + emisveg * Ls - (1 + emissoil) * Lc) * fdhc * (1 - LWEXP)
+    return (emisveg * Lsky(P , Ta , HP , eaOPT) + emisveg * Ls - (1 + emisSoil) * Lc) * fdhc * (1 - lwexp)
 
-def Snr(Rs , KbVIS , KbNIR , fsc , fdhc , thetas , psis , hc , wc , row , Pr , Vr , LAI , XE , ZetaVIS , ZetaNIR , rhosVIS , rhosNIR , PISI ): 
-    return None
 
-def Sns(Rs , KbVIS , KbNIR , fsc , fdhc , thetas , psis , hc , wc , row , Pr , Vr , LAI , XE , ZetaVIS , ZetaNIR , rhosVIS , rhosNIR , PISI ): 
+def Sns(Rs , KbVis , KbNir , fsc , fdhc , thetas , psis , hc , wc , row , Pr , Vr , LAI): 
 
     #def Sns to calculate net shortwave radiation to the soil using
     #Campbell and Norman (1998) radiative transfer model and elliptical hedgerow geometric model
 
     #Rs = Global shortwave irradiance (W m-2)
-    #KbVIS = Fraction of direct beam shortwave irradiance in the visible spectra (no units)
-    #KbNIR = Fraction of direct beam shortwave irradiance in the near infrared spectra (no units)
+    #KbVis = Fraction of direct beam shortwave irradiance in the visible spectra (no units)
+    #KbNir = Fraction of direct beam shortwave irradiance in the near infrared spectra (no units)
     #fsc = Direct beam solar - canopy planar view factor (no units)
     #fdhc = Downward hemispherical view factor of canopy of a row crop
     #       (e.g., canopy viewed by an inverted radiometer)
@@ -164,48 +160,41 @@ def Sns(Rs , KbVIS , KbNIR , fsc , fdhc , thetas , psis , hc , wc , row , Pr , V
     #Vr = Vertical distance of radiometer from soil surface (m)
     #LAI = Leaf area index, field (m2 m-2)
     #XE = Ratio of horizontal to vertical projected leaves (for spherical LADF, XE = 1)
-    #ZetaVIS = Leaf shortwave absorption in the visible (PAR) spectra (no units)
 
-    #ZetaNIR = Leaf shortwave absorption in the near infrared spectra (no units)
-    #rhosVIS = Soil reflectance in the visible (PAR) spectra (no units)
-    #rhosNIR = Soil reflectance in the near infrared spectra (no units)
-    #PISI = Fraction of visible shortwave irriadiance in global irradiance;
-    #~0.457 at Bushland, which agrees with Meek et al. (1984) for other Western US locations
-
-    #         taudirVIS      #Shortwave direct beam canopy transmittance in the
+    #         taudirVis      #Shortwave direct beam canopy transmittance in the
     #visible spectra (no units)
-    #         taudiffVIS      #Shortwave diffuse canopy transmittance in the
+    #         taudiffVis      #Shortwave diffuse canopy transmittance in the
     #visible spectra (no units)
-    #         taudirNIR      #Shortwave direct beam canopy transmittance in the
+    #         taudirNir      #Shortwave direct beam canopy transmittance in the
     #near infrared spectra (no units)
-    #         taudiffNIR      #Shortwave diffuse canopy transmittance in the
+    #         taudiffNir      #Shortwave diffuse canopy transmittance in the
     #near infrared spectra (no units)
 
-    #         TVIS   #Transmitted visible irradiance (W m-2)
-    # TNIR   #Transmitted near infrared irradiance (W m-2)
+    #         TVis   #Transmitted visible irradiance (W m-2)
+    # TNir   #Transmitted near infrared irradiance (W m-2)
 
     if Rs = 0: return 0
 
     wc = min(0.99*row,wc)
 
-    taudirVIS = canopy.taudir(thetas, psis, hc, wc, row, LAI, XE, ZetaVIS, rhosVIS)
-    taudiffVIS = canopy.taudiff(hc, wc, row, LAI, XE, ZetaVIS, rhosVIS)
-    taudirNIR = canopy.taudir(thetas, psis, hc, wc, row, LAI, XE, ZetaNIR, rhosNIR)
-    taudiffNIR = canopy.taudiff(hc, wc, row, LAI, XE, ZetaNIR, rhosNIR)
+    taudirVis = canopy.taudir(thetas, psis, hc, wc, row, LAI)
+    taudiffVis = canopy.taudiff(hc, wc, row, LAI)
+    taudirNir = canopy.taudir(thetas, psis, hc, wc, row, LAI)
+    taudiffNir = canopy.taudiff(hc, wc, row, LAI)
 
-    TVIS = Rs * PISI * ((fsc * taudirVIS + 1 - fsc) * KbVIS + (fdhc * taudiffVIS + 1 - fdhc) * (1 - KbVIS))
+    TVis = Rs * PISI * ((fsc * taudirVis + 1 - fsc) * KbVis + (fdhc * taudiffVis + 1 - fdhc) * (1 - KbVis))
 
-    TNIR = Rs * (1 - PISI) * ((fsc * taudirNIR + 1 - fsc) * KbNIR + (fdhc * taudiffNIR + 1 - fdhc) * (1 - KbNIR))
+    TNir = Rs * (1 - PISI) * ((fsc * taudirNir + 1 - fsc) * KbNir + (fdhc * taudiffNir + 1 - fdhc) * (1 - KbNir))
 
-    return TVIS * (1 - rhosVIS) + TNIR * (1 - rhosNIR)
+    return TVis * (1 - rhosVis) + TNir * (1 - rhosNir)
 
-def Snc(Rs , KbVIS , KbNIR , fsc , fdhc , thetas , psis , hc , wc , row , Pr , Vr , LAI , XE , ZetaVIS , ZetaNIR , rhosVIS , rhosNIR , PISI ): 
+def Snc(Rs , KbVis , KbNir , fsc , fdhc , thetas , psis , hc , wc , row , Pr , Vr , LAI): 
 
     #def Snc to calculate net shortwave radiation to the canopy using
     #Campbell and Norman (1998) radiative transfer model and elliptical hedgerow geometric model
     #Rs = Global shortwave irradiance (W m-2)
-    #KbVIS = Fraction of direct beam shortwave irradiance in the visible spectra (no units)
-    #KbNIR = Fraction of direct beam shortwave irradiance in the near infrared spectra (no units)
+    #KbVis = Fraction of direct beam shortwave irradiance in the visible spectra (no units)
+    #KbNir = Fraction of direct beam shortwave irradiance in the near infrared spectra (no units)
     #fsc = Direct beam solar - canopy planar view factor (no units)
     #fdhc = Downward hemispherical view factor of canopy of a row crop
     #       (e.g., canopy viewed by an inverted radiometer)
@@ -221,60 +210,60 @@ def Snc(Rs , KbVIS , KbNIR , fsc , fdhc , thetas , psis , hc , wc , row , Pr , V
     #Vr = Vertical distance of radiometer from soil surface (m)
     #LAI = Leaf area index, field (m2 m-2)
     #XE = Ratio of horizontal to vertical projected leaves (for spherical LADF, XE = 1)
-    #ZetaVIS = Leaf shortwave absorption in the visible (PAR) spectra (no units)
+    #ZetaVis = Leaf shortwave absorption in the visible (PAR) spectra (no units)
 
-    #ZetaNIR = Leaf shortwave absorption in the near infrared spectra (no units)
-    #rhosVIS = Soil reflectance in the visible (PAR) spectra (no units)
-    #rhosNIR = Soil reflectance in the near infrared spectra (no units)
+    #ZetaNir = Leaf shortwave absorption in the near infrared spectra (no units)
+    #rhosVis = Soil reflectance in the visible (PAR) spectra (no units)
+    #rhosNir = Soil reflectance in the near infrared spectra (no units)
     #PISI = Fraction of visible shortwave irriadiance in global irradiance;
     #~0.457 at Bushland, which agrees with Meek et al. (1984) for other Western US locations
     
-    #taudirVIS      #Shortwave direct beam canopy transmittance in the
+    #taudirVis      #Shortwave direct beam canopy transmittance in the
     #visible spectra (no units)
-    #taudiffVIS      #Shortwave diffuse canopy transmittance in the
+    #taudiffVis      #Shortwave diffuse canopy transmittance in the
     #visible spectra (no units)
-    #taudirNIR      #Shortwave direct beam canopy transmittance in the
+    #taudirNir      #Shortwave direct beam canopy transmittance in the
     #near infrared spectra (no units)
-    #taudiffNIR      #Shortwave diffuse canopy transmittance in the
-    #near infrared spectra (no units)
-
-    #alphadirVIS      #Shortwave direct beam canopy reflectance in the
-    #visible spectra (no units)
-    #             alphadiffVIS      #Shortwave diffuse canopy reflectance in the
-    #visible spectra (no units)
-    #             alphadirNIR      #Shortwave direct beam canopy reflectance in the
-    #near infrared spectra (no units)
-    #alphadiffNIR      #Shortwave diffuse canopy reflectance in the
+    #taudiffNir      #Shortwave diffuse canopy transmittance in the
     #near infrared spectra (no units)
 
-    #SncdirVIS  #Net shortwave direct beam radiation to the canopy in the
+    #alphadirVis      #Shortwave direct beam canopy reflectance in the
+    #visible spectra (no units)
+    #             alphadiffVis      #Shortwave diffuse canopy reflectance in the
+    #visible spectra (no units)
+    #             alphadirNir      #Shortwave direct beam canopy reflectance in the
+    #near infrared spectra (no units)
+    #alphadiffNir      #Shortwave diffuse canopy reflectance in the
+    #near infrared spectra (no units)
+
+    #SncdirVis  #Net shortwave direct beam radiation to the canopy in the
     #visible spectra (W m-2)
-    #SncdiffVIS  #Net shortwave diffuse radiation to the canopy in the
+    #SncdiffVis  #Net shortwave diffuse radiation to the canopy in the
     #visible spectra (W m-2)
-    #SncdirNIR  #Net shortwave direct beam radiation to the canopy in the
+    #SncdirNir  #Net shortwave direct beam radiation to the canopy in the
     #near infrared spectra (W m-2)
-    #SncdiffNIR  #Net shortwave diffuse radiation to the canopy in the
+    #SncdiffNir  #Net shortwave diffuse radiation to the canopy in the
     #near infrared spectra (W m-2)
 
     if Rs = 0: return  0
     wc = min(wc,0.99 * row)
 
-    taudirVIS = canopy.taudir(thetas, psis, hc, wc, row, LAI, XE, ZetaVIS, rhosVIS)
-    taudiffVIS = canopy.taudiff(hc, wc, row, LAI, XE, ZetaVIS, rhosVIS)
-    taudirNIR = canopy.taudir(thetas, psis, hc, wc, row, LAI, XE, ZetaNIR, rhosNIR)
-    taudiffNIR = canopy.taudiff(hc, wc, row, LAI, XE, ZetaNIR, rhosNIR)
+    taudirVis = canopy.taudir(thetas, psis, hc, wc, row, LAI)
+    taudiffVis = canopy.taudiff(hc, wc, row, LAI)
+    taudirNir = canopy.taudir(thetas, psis, hc, wc, row, LAI)
+    taudiffNir = canopy.taudiff(hc, wc, row, LAI)
 
-    alphadirVIS = canopy.rhocsdir(thetas, psis, hc, wc, row, LAI, XE, ZetaVIS, rhosVIS)
-    alphadiffVIS = canopy.rhocsdiff(hc, wc, row, LAI, XE, ZetaVIS, rhosVIS)
-    alphadirNIR = canopy.rhocsdir(thetas, psis, hc, wc, row, LAI, XE, ZetaNIR, rhosNIR)
-    alphadiffNIR = canopy.rhocsdiff(hc, wc, row, LAI, XE, ZetaNIR, rhosNIR)
+    alphadirVis = canopy.rhocsdir(thetas, psis, hc, wc, row, LAI)
+    alphadiffVis = canopy.rhocsdiff(hc, wc, row, LAI)
+    alphadirNir = canopy.rhocsdir(thetas, psis, hc, wc, row, LAI)
+    alphadiffNir = canopy.rhocsdiff(hc, wc, row, LAI)
 
-    SncdirVIS = Rs * PISI * KbVIS * fsc * (1 - taudirVIS) * (1 - alphadirVIS)
-    SncdiffVIS = Rs * PISI * (1 - KbVIS) * fdhc * (1 - taudiffVIS) * (1 - alphadiffVIS)
-    SncdirNIR = Rs * (1 - PISI) * KbNIR * fsc * (1 - taudirNIR) * (1 - alphadirNIR)
-    SncdiffNIR = Rs * (1 - PISI) * (1 - KbNIR) * fdhc * (1 - taudiffNIR) * (1 - alphadiffNIR)
+    SncdirVis = Rs * PISI * KbVis * fsc * (1 - taudirVis) * (1 - alphadirVis)
+    SncdiffVis = Rs * PISI * (1 - KbVis) * fdhc * (1 - taudiffVis) * (1 - alphadiffVis)
+    SncdirNir = Rs * (1 - PISI) * KbNir * fsc * (1 - taudirNir) * (1 - alphadirNir)
+    SncdiffNir = Rs * (1 - PISI) * (1 - KbNir) * fdhc * (1 - taudiffNir) * (1 - alphadiffNir)
 
-    return SncdirVIS + SncdiffVIS + SncdirNIR + SncdiffNIR
+    return SncdirVis + SncdiffVis + SncdirNir + SncdiffNir
 
 
                 

@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import cv2
 import time
-from utils import *
+from constants import *
 from time import sleep
 from datetime import datetime
 import os
@@ -58,78 +58,6 @@ def rho_a(T,e,P):#density of moist air in kg/m3 - T in C, e vapor pressure kPa, 
 
 def gamm_psy(P,T):#psychrometric constant kPa/C
     return ((1.013 * 10 ** -6) * P) / (0.622 * latent(T)) 
-
-def PMTc(solzen , P , Ta , HP , eaOPT ,
-              z , hc , dhc , zomhc , sc , LAI ,
-              uref , hcref , Tr , i , t ,
-              Rn , GRnday , GRnnight , rcday , rcnight ) 
-    #def PMTc to compute baseline (i.e., non water stressed) canopy temperature for a crop
-    #completely covering the soil using the PENMAN-MONTEITH equation.
-
-    #Variables internal to this function:
-    #G  #Soil heat flux (W m-2)
-    #rc  #Bulk canopy resistance (s m-1)
-    #gamma  #Psychromertic constant (kPa C-1)
-    #delta  #Slope of the saturation vapor pressure - temperature relation (kPa C-1)
-    #es     #Saturation vapor pressure of air temperature (kPa)
-    #ea1    #Actual vapor pressure at air temperature (kPa)
-    #rhoa   #Density of mosit air (kg m-3)
-    #ra    #Aerodynamic resistance (s m-1)
-    #gammastar  #=gamma*(1+rc/ra) (kPa C-1)
-
-    if solzen < 90:
-        G = Rn * GRnday
-        rc = rcday
-    else:
-        G = Rn * GRnnight
-        rc = rcnight
-
-
-    gamma = 0.000665 * P
-    delta = slope(Ta)
-    es = esa(Ta)
-    ea1 = ea(P, Ta, HP, eaOPT)
-    rhoa = rho_a(Ta,ea1,P)
-    ra = rahRi(z, hc, dhc, zomhc, sc, 5, rhoa, uref, hcref, Ta, Tr)
-    gammastar = gamma * (1 + rc / ra)
-
-    PMTc = Ta + ra * gammastar * (Rn - G) / (rhoa * 1013 * (delta + gammastar)) -
-    (es - ea1) / (delta + gammastar)
-    return PMTc
-
-
-def Tsinitial(Ta , Tr , fr , ea , Tc ) 
-    #def Tsinitial to compute soil temperature Ts (C) in first iteration
-    #of two source model, based on initial canopy temperature estimated
-    #from Priestley-Taylor equation, directional brightness temperature
-    #of the surface, and IRT-vegetation view factor. Tsinitial is constrained by
-    #the estimated air wet bulb temperature.
-
-    #Ta = Air temperature, usually around 2 m height (C)
-    #Tr = Radiometric directional surface temperature (C)
-    #fr = Directional radiometer - vegetation view factor
-    #ea = Actual vapor pressure of the air (kPa)
-    #Tc = Canopy temperature estimated by Penman-Monteith or Priestley-Taylor equation (C)
-
-    #Variable definitions internal to this function
-    ##A 
-    ##Tdew   #Dew point temperature (C)
-    #Twet   #Wet bulb temperature (C)
-
-    Tsinitial = (np.abs((Tr + 273.16) ** 4 - fr * (Tc + 273.16) ** 4) / (1 - fr)) ** (1 / 4) - 273.16
-
-    #Calculate humidity and psychrometric parameters
-    #L      #Latent heat of vaporization (MJ/kg)
-    #P  #Standard barometric pressure for Bushland at 1170 m above MSL (kPa)
-    #delta  #Slope of the saturation vapor pressure-temperature curve (kPa/C)
-    #gamma  #Psychrometric constant (kPa/C)
-    #es     #Saturated vapor pressure of the air (kPa)
-
-    Tw = Twet(Ta, ea, P)
-
-    if Tsinitial < Tw: Tsinitial = Tw
-
-    return Tsinitial
 
 
 def Twet(Ta , ea, P): 
@@ -329,19 +257,6 @@ def rsh(uz , hcref , hc , zu , s , LAI , row , wc, Ts , Tc )
 
     return rsh
 
-def ecini(LEc , gamma , rx , ra , rhoa , LEs , ea ): 
-    #def to calculate ecini, the vapor pressure at the canopy surface using the initial
-    #canopy temperature that was calculated by the inverted ASCE-PM
-
-    return ea + (LEs * gamma * ra) / (rhoa * c_p) + (1 / ra + 1 / rx) * (LEc * gamma * rx * ra) / (rhoa * c_p)
-
-
-def eacini(gamma , rx , ra , rhoa , LEs , ea , ec ): 
-    #def to calculate eacini, the vapor pressure in the canopy boundary layer using
-    #the initial canopy temperature that was calculated by the inverted ASCE-PM
-
-    return (ea / ra + ec / rx + LEs * gamma / rhoa / 1013) / (1 / ra + 1 / rx)
-
 def rahRi(z , hc , dhc , zomhc , sc , nuRi , rhoa , uref , hcref, Ta , Tc ):
     #def to calculate aerodynamic resistance (s/m) using Richardson number for stability
     #correction (Kimball et al., 2015, Agron J 107(1): 129-141 and references therein).
@@ -394,34 +309,3 @@ def rahRi(z , hc , dhc , zomhc , sc , nuRi , rhoa , uref , hcref, Ta , Tc ):
 
     rahRi = psiRi * (1 / u) * ((1 / vonk) * np.log((zu - d + zom) / zom)) ** 2
     return rahRi
-
-def Tsimax(solzen , P , Ta , HP , eaOPT, hc, LAI ,uref , hcref , Tr , nmax , tol , Rn, s , row , wc, Tc ) :
-
-    #def Tsimax to calculate the maximum initial soil temperature using the
-        #FAO 56 (Rn - G) for available energy.
-
-    #Variables internal to this function:
-        #G  #Soil heat flux (W m-2)
-    #rc  #Bulk canopy resistance (s m-1)
-        #ea1    #Actual vapor pressure at air temperature (kPa)
-    #rhoa   #Density of mosit air (kg m-3)
-        #ra    #Aerodynamic resistance (s m-1)
-    #rsh1   #Soil heat flux resistance (s m-1)
-
-    if solzen < 90:
-        G = Rn * GRnday
-        rc = rcday
-    else:
-        G = Rn * GRnnight
-        rc = rcnight
-
-
-    ea1 = ea(P, Ta, HP, eaOPT)
-    rhoa = (T,ea1,P)
-    ra = rahRi(zu, hc, 5, rhoa, uz, hcref, Ta, Tc)
-#rsh1 = rsh(uref, hcref, hc, dhc, zomhc, sc, z, s, LAI, row, wc, b, c, Tr, Tc)
-    Tsimax = Ta + (ra) * (Rn - G) / (rhoa * c_p)
-
-    
-
-    
