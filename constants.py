@@ -28,23 +28,27 @@ R_d = 287.04
 #Monin-Obukhov parameters
 dhc = .67#displacement height/canopy height C&N98, K95 say 0.65
 zomhc = 0.125#momemtun roughness over canopy height K95
-zohzom = 1#heat roughness over momentum roughness C&N say .2, K95 say exp(-2)
+zohzom = 1#heat roughness over momentum roughness C&N say .2,
+# K95 say exp(-2),
+# K99 set equal for series model
 
 #Measurement heights (speed and temp)
 zu = 2
 zt = 2
 
-#reference height if taken on separate height
-hcref = np.nan
-
 #bare soil roughness
-#zombs = .4e-3 #m
-#zoh_bs =
+#hs = .4e-3 #m
+#zombs = 1 #m
+#zohzom = np.exp(-4.5) #from Stewart paper
+#Stewart, J. B., W. P. Kustas, K. S. Humes, W. D. Nichols, M. S.
+#Moran, and H. A. R. de Bruin, 1994: Sensible heat fluxradiometric
+#surface temperature relationship for eight semiarid
+#areas. J. Appl. Meteor., 33, 1110–1117.
 
 #soil heat flux
-GRnDay = 0.1
-GRnNight = 0.5
-
+GRnDay = -0.1
+GRnNight = -0.5
+aG = -0.31
 #canopy stomatal resistance s/m
 rcDay = 50
 rcNight = 200
@@ -57,8 +61,8 @@ rhosNis = 0.25
 emisSoil = 0.98
 
 #residue albedo
-#rhoresnir = 
-#rhoresvis =
+#rhorNir = 
+#rhorVis =
 
 #residue emissivity
 emisRes = 0.98

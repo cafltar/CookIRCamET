@@ -79,32 +79,28 @@ def Twet(Ta , ea, P):
     es = esa(Ta)
     return Ta - ((es - ea) / (gamma + delta))
 
-#PAUL D COLAIZZI
-def u_from_uref(hc,uz):
-    #Calculate d, zom, zoh
-    d = dhc * hc
-    zom = zomhc * hc
-    zoh = zohzom * zom
-
-    if uz < 1: uz = 1
-
-    #Adjust wind speed measured over reference surface to wind speed over crop surface with
-    #hc difference from hcref
-    if !np.isnan(hcref):
-        u = uz * (np.log((10 - 0.67 * hcref) / (0.123 * hcref))) * (np.log((zu - d) / zom)) / (np.log((zu - 0.67 * hcref) / (0.123 * hcref))) / (np.log((10 - d) / zom))
+def roughness_lengths(h,fveg):
+    if fveg>0:
+        #Calculate d, zom, zoh
+        d = dhc * h
+        zom = zomhc * h
+        zoh = zohzom * zom
     else:
-        u = uz
-
-    return u, d, zom, zoh
+        d = dhs * h
+        zom = zomhs * h
+        zoh = zohzom * zom
+        
+    return d, zom, zoh
     
 
-def rahmost(hc , LAI , uz, Ta , Tr , nmax , tol): 
+def rahmost(h , LAI , uz, Ta , Tr , nmax , tol, fveg): 
     #def to compute aerodynamic resistance (s/m) using Monin-Obukov (1954)
     #Similarity Theory (MOST), where correction coefficients for unstable and stable conditions
     #are given by Paulson (1970) and Webb (1970)
 
     #zu = height of wind speed measurement (m)
-    #hc = canopy height (m)
+    #h = canopy height (m)/soil roughness
+    #fveg = veg fraction
     #uz = Wind speed measured at height z (m/s)
     #Ta = Air temperature (C)
     #Tr = Radiometric surface temperature (C)
@@ -126,7 +122,7 @@ def rahmost(hc , LAI , uz, Ta , Tr , nmax , tol):
     #X      #Used to compute psih and psim in unstable conditions
     #u      #Wind speed adjusted over crop ( m s-1)
 
-    u, d, zom, zoh = u_from_uref(hc,uz)
+    d, zom, zoh = roughnesslengths(h,fveg)
     
     PsiM = 0
     PsiH = 0
@@ -162,7 +158,7 @@ def rahmost(hc , LAI , uz, Ta , Tr , nmax , tol):
         uf = vonk * u / ((np.log((zu - d) / zom)))
         rahmost = ((np.log((zu - d) / (zoh)))) / (vonk * uf)
 
-def rx(hc, uz , s , LAI , row , wc): 
+def rx(hc, uz , s , LAI , row , wc, fveg): 
     #def rx to compute resistance of heat transport between canopy and canopy
     #displacement height; taken from Norman et al. (1995) Appendix A
 
@@ -176,14 +172,12 @@ def rx(hc, uz , s , LAI , row , wc):
     #LAI = Leaf area index (m2 m-2)
     #row = Crop row spacing (m)
     #wc = Vegetation row width (m)
-    #hcref = height of reference surface (m)
-
     #d      #Zero plane displacement (m)
     #zom    #Roughness length for momentum transfer (m)
     #zoh    #Roughness length for heat diffusion (m)
     #Uz     #Wind speed over crop surface (m s-1)
 
-    u, d, zom, zoh = u_from_uref(hc,uz)
+    d, zom, zoh = roughnesslengths(h,fveg)
 
     #Convert field LAI to local LAI
     #LAIL   #Local LAI (i.e., within vegeation row) (m2 m-2)
@@ -205,7 +199,7 @@ def rx(hc, uz , s , LAI , row , wc):
     rx = (Cx / LAIL) * ((s / udz) ** 0.5)
     return rsh
     
-def rsh(hc , zu , s , LAI , row , wc, Ts , Tc ) 
+def rsh(h , zu , s , LAI , row , wc, Ts , Tc, fveg ) 
     #def rsh to compute resistance of heat transport between soil and canopy displacement height
     #Taken from Norman et al. (1995) Appendix B AND Kustas and Norman (1999)
 
@@ -231,7 +225,7 @@ def rsh(hc , zu , s , LAI , row , wc, Ts , Tc )
     #Uz     #Wind speed over crop surface (m s-1)
 
     #Calculate d, zom, zoh
-    u, d, zom, zoh = u_from_uref(hc,uz)
+    d, zom, zoh = roughnesslengths(h,fveg)
 
     #Convert field LAI to local LAI
     #LAIL   #Local LAI (i.e., within vegeation row) (m2 m-2)

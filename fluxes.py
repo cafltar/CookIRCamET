@@ -20,15 +20,19 @@ def LE(H,Rn,G):
     return Rn-G-H
 def LEc(Hc,Rnc):
     return Rnc-Hc
-def LEs(Rns,Hs,Gn):
-    return Rns-Hs-Gn
+def LEs(Rns,Hs,Gs):
+    return Rns-Hs-Gs
+def LEs(Rnr,Hr,Gr):
+    return Rnr-Hr-Gr
 
 def H(Tac,Ta,ra):
     return aero.rho_a(Tac)*(Tac-Ta)/ra*c_p
 def Hc(Tac,Tc,rx):
     return aero.rho_a(Tac)*(Tc-Tac)/rx*c_p
-def Hs(Tac,Ta,ra,fs):
+def Hs(Tac,Ts,ra,fs):
     return aero.rho_a(Tac)*(Ts-Tac)/rs*c_p
+def Hr(Tac,Tr,ra,fs):
+    return aero.rho_a(Tac)*(Tr-Tac)/rs*c_p
 
 def Lsky(P , Ta , HP , eaOPT ): 
     #def Lsky to calculate hemispherical downwelling longwave irradiance from the sky (W m-2).

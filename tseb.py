@@ -23,7 +23,7 @@ modeltype = '2SEB'
 #get Tc, Ts
 #3SEB
 #get Tc, Ts, Tr
-#3SEB
+#4SEB
 #get Tc,sh, Ts,sh, Tc,sn, Ts,sn
 
 lat = #(dec deg)
@@ -34,13 +34,18 @@ zu = #measurement height of wind
 zt = #measurement height of temperature
 
 row = #row width
+
 #read from file
-#Ta, P, ea
+#Ta, P, ea/RH
 #Tc, Ts, Tr, Trad
-#Rn, Su, Sd, Lu, Ld
+
+#Rn/Rd
+#use Rn as input,Sd and Ld, or calculate solar from equation
+#RSopt 1, 2, 3
+
 #time
-#canopy height, fraction, width, LAI
-#residue fraction
+#canopy height, fractions, width, LAI
+#if width is NA use width = row*fcanopy
 
 if modeltype=='1SEB':
     #out_df = DataFrame(columns=['datetime (UTC)','sun elevation (deg)','sun azimuth (deg)','LE (W/m2)','H (W/m2)','G (W/m2)','Rn (W/m2)','ET (mm)'])
@@ -56,18 +61,22 @@ else:
 #met_df = pd.read_csv()
 #read in met vars
 #extract date variables
-#Kbeam(Rs , KbConst , KbExp , DOY , t , Ta , P , lon , lat , lz , ele , T1 , RsOpt , kt , eaOPT )
-#read camera data
-
-if modeltype=='1SEB' or np.isnan(hc) or hc==0:
-    #calculate roughness lengths from canopy/bare soil/residue
-
+#process 1 day at a time for G
+if modeltype=='1SEB':
     #calculate resistances
     ra = aero.rahmost()
 
-    #calculate fluxes
-
-    #G,H,LE
+    #radiation as input?
+    if np.isnan(Rn):
+        #use solar module
+        Rso =
+        KBeamNir =
+        KBeamVis =
+        
+    #calculate fluxes    
+    H = fluxes.H()
+    G = fluxes.G()
+    LE = fluxes.LE()
 
 
 elif modeltype=='2SEB':
