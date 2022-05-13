@@ -9,17 +9,11 @@ import os
 import numpy as np
 import logging 
 
-def ea(P , Ta , HP , eaOPT):
+def ea(P , Ta , RH):
     #def ea to compute actual vapor pressure of the air (kPa)
     #P = Barometric pressure (kPa)
     #Ta = Air temperature, usually around 2 m height (C)
-    #HP = Humidity parameter, depends on eaOPT
-    #eaOPT = Option to specify which humidity paramater is used
-    #           to compute actual vapor pressure of the air (ea, kPa)
-    #           eaOPT = 1: RH (%) is used
-    #           eaOPT = 2: Twet (%) is used
-    #           eaOPT = 3: Tdew (%) is used
-    
+    #RH = Relative humidity
     #Variable definitions internal to this function
     #es     #Saturated vapor pressure of the air (kPa)
     #RH     #Relative humidity (%)
@@ -28,21 +22,8 @@ def ea(P , Ta , HP , eaOPT):
     #apsy   #Psychrometer coefficient
     # gammapsy   #Psychrometer constant
 
-    if eaOPT = 1:
-        RH = HP
-        es = esa(Ta)
-        ea = es * RH / 100
-    else:
-        if eaOPT = 2:
-            Tw = HP
-            apsy = 0.000662 #For aspirated psychrometers, FAO 56 p. 38
-            gammapsy = P * apsy
-            es = esa(Tw)
-            ea = es - gammapsy * (Ta - Tw)
-        else:
-            Tdew = HP
-            ea = esa(Tdew)
-    return ea
+    es = esa(Ta)
+    return es * RH / 100
 
 def esa(T):#saturation vapor pressure kPa, T is temp in deg C
     return  0.61078 * np.exp((17.269 * T) / (237.3 + T))

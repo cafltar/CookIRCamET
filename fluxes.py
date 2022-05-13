@@ -10,11 +10,18 @@ import os
 import numpy as np
 import logging 
 
-def G(Rn):   
-    if Rn < 0:
-        return Rn * GRnday
-    else:
-        return Rn * GRnnight
+def G(R):
+
+    #R (soil or residue) 24 hour time series
+    #G (soil or residue) 24 hour time series
+    #from Colaizzi 2016    
+    Rmax = np.max(R)
+    Rmin = np.min(R)
+    return (R-Rmin)/(Rmax-Rmin)*(aG*Rmax+Rmin)-Rmin
+    #if R < 0:
+    #    return R * GRnday
+    #else:
+    #    return R * GRnnight
     
 def LE(H,Rn,G):
     return Rn-G-H
@@ -34,20 +41,18 @@ def Hs(Tac,Ts,ra,fs):
 def Hr(Tac,Tr,ra,fs):
     return aero.rho_a(Tac)*(Tr-Tac)/rs*c_p
 
-def Lsky(P , Ta , HP , eaOPT ): 
+def Lsky(P , Ta , RH): 
     #def Lsky to calculate hemispherical downwelling longwave irradiance from the sky (W m-2).
     #P = Barometric pressure (kPa)
     #Ta = Air temperature, usually around 2 m height (C)
-    #HP = Humidity parameter, depends on eaOPT
-    #eaOPT = Option to specify which humidity paramater is used
-    #           to compute actual vapor pressure of the air (ea, kPa)
+    #RH = RH
 
     #Variable definitions internal to this function
     #ea1     #Actual vapor pressure of the air (kPa)
     # emisatm    #Atmospheric emissivity
     # boltz     #Stephan-Boltzmann constant (W m-2 K-4)
 
-    ea1 = aero.ea(P, Ta, HP, eaOPT)
+    ea1 = aero.ea(P, Ta, RH)
 
     emisatm = 0.7 + (0.000595) * ea1 * np.exp(1500 / (Ta + 273.16))
     #Idso et al (1981) WRR 17(2): 295-304, eq. 17 (hemispherical view factor, full longwave spectrum)
@@ -57,23 +62,18 @@ def Lsky(P , Ta , HP , eaOPT ):
 
     return emisatm * boltz * ((Ta + Tk) ** 4)   
 
-def Lns(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT, fdhc, fres, fsoil): 
+def Lns(P , Ta , RH , Ts , Tc , LAI , wc , row , fdhc, fres, fsoil): 
     #def Lnsoil to compute the net longwave radiation to the SOIL using the
     #fdhc VIEW FACTOR model (W m-2).
 
     #P = Barometric pressure (kPa)
     #Ta = Air temperature, usually around 2 m height (C)
-    #HP = Humidity parameter, depends on eaOPT
+    #RH
     #Ts = Directional brightness temperature of the soil (C)
     #Tc = Directional brightness temperature of the canopy (C)
     #LAI = Leaf area index (m2 m-2)
     #wc = Canopy width (m)
     #row = Row spacing (m)
-    #eaOPT = Option to specify which humidity paramater is used
-    #           to compute actual vapor pressure of the air (ea, kPa)
-    #           eaOPT = 1: RH (%) is used
-    #           eaOPT = 2: Twet (%) is used
-    #           eaOPT = 3: Tdew (%) is used
     #emisSoil = Longwave emittance of the soil
     #emisveg = Longwave emittance of the canopy
     #kappair = Longwave extinction coefficient of the canopy
@@ -95,28 +95,23 @@ def Lns(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT, fdhc, fres, fsoil):
     Ls = emisSoil * boltz * ((Ts + Tk) ** 4)
     lwexp = np.exp(-kappIr * LAIL)
     
-    return emisSoil * Lsky(P , Ta , HP , eaOPT) * (1 - fdhc + fdhc * lwexp) + emisSoil * Lc * fdhc * (1 - lwexp) - Ls
+    return emisSoil * Lsky(P , Ta , RH ) * (1 - fdhc + fdhc * lwexp) + emisSoil * Lc * fdhc * (1 - lwexp) - Ls
 
     #LnsoilV = emisSoil * Lsky * (1 - wc / row + wc / row * lwexp) + 
     #emisSoil * Lc * wc / row * (1 - lwexp) - Ls
 
-def Lnc(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT , fdhc ) :
+def Lnc(P , Ta , RH , Ts , Tc , LAI , wc , row  , fdhc ) :
     #def Lncanopy to compute the net longwave radiation to the CANOPY using the
     #VERTICAL VIEW FACTOR radiation model (W m-2).
 
     #P = Barometric pressure (kPa)
     #Ta = Air temperature, usually around 2 m height (C)
-    #HP = Humidity parameter, depends on eaOPT
+    #RH = Relative Humidity %
     #Ts = Directional brightness temperature of the soil (C)
     #Tc = Directional brightness temperature of the canopy (C)
     #LAI = Leaf area index (m2 m-2)
     #wc = Canopy width (m)
     #row = Row spacing (m)
-    #eaOPT = Option to specify which humidity paramater is used
-    #           to compute actual vapor pressure of the air (ea, kPa)
-    #           eaOPT = 1: RH (%) is used
-    #           eaOPT = 2: Twet (%) is used
-    #           eaOPT = 3: Tdew (%) is used
     #emisSoil = Longwave emittance of the soil
     #emisveg = Longwave emittance of the canopy
     #kappIr = Longwave extinction coefficient of the canopy
@@ -138,7 +133,7 @@ def Lnc(P , Ta , HP , Ts , Tc , LAI , wc , row , eaOPT , fdhc ) :
     Ls = emisSoil * boltz * ((Ts + Tk) ** 4)
     lwexp = np.exp(-kappIr * LAIL)
 
-    return (emisveg * Lsky(P , Ta , HP , eaOPT) + emisveg * Ls - (1 + emisSoil) * Lc) * fdhc * (1 - lwexp)
+    return (emisveg * Lsky(P , Ta , RH ) + emisveg * Ls - (1 + emisSoil) * Lc) * fdhc * (1 - lwexp)
 
 
 def Sns(Rs , KbVis , KbNir , fsc , fdhc , thetas , psis , hc , wc , row , Pr , Vr , LAI): 

@@ -128,13 +128,13 @@ def Solarazimuth(DOY , Tdec , lon , lat, lz ):
     return Solarazimuth
 
 #def Rso to compute clear sky radiation (W/m2)
-def Rso(DOY , t , Ta , HP , P, lon, lat, lz , ele , T1 , RsOpt , kt, eaOPT ): 
+def Rso(DOY , t , Ta , RH , P, lon, lat, lz , ele , T1 , RsOpt , kt): 
     #Rso = Clear sky solar radiation (W/m2)
     #DOY = Julian Day of Year
     #t = Standard clock time of midpoint of period without decimals (hr)
     #       e.g., 12:45 am = 45; 3:15 pm = 1515
     #Ta = Air temperature (C)
-    #HP = Humidity parameter, depends on eaOPT
+    #RH
     #P = Measured barometric pressure (kPa)
     #lz = longitude of center of time zone (degrees West of Greenwich)
     #       75, 90, 105, 120 degrees for Eastern, Central, Mountain, and Pacific,
@@ -147,11 +147,6 @@ def Rso(DOY , t , Ta , HP , P, lon, lat, lz , ele , T1 , RsOpt , kt, eaOPT ):
     #   2 = Beer#s law (accounts for P, turbidity, and path length)
     #   3 = Accounts for P, atm moisture, turbidity, and path length)
     #Kt = Turbidity coefficient (Kt = 1 recommended, ASCE-EWRI, 1-24-02, p.D7) (unitless)
-    #eaOPT = Option to specify whether dewpoint temperature (Tdew, C) or relative humidity (RH, %)
-    #           is used to compute actual vapor pressure of the air (ea, kPa)
-    #           eaOPT = 1: RH (%) is used
-    #           eaOPT = 2: Twet (%) is used
-    #           eaOPT = 3: Tdew (%) is used
     
     #Variable definitions internal to compuing Ra
     # pi     #pi
@@ -240,7 +235,7 @@ def Rso(DOY , t , Ta , HP , P, lon, lat, lz , ele , T1 , RsOpt , kt, eaOPT ):
         Rso = ra * np.exp((-0.0018 * P) / (kt * sinPhi))    #(MJ/m2/t1), FAO 56, p.226, eq.(3-14)
         return Rso
     if RsOpt = 3:
-        ea=aero.ea(P , Ta , HP , eaOPT)
+        ea=aero.ea(P , Ta , RH)
         W = 0.14 * ea * P + 2.1 #FAO 56, p.227, eq.(3-19)
         Kb = 0.98 * np.exp(((-0.00146 * P) / (kt * sinPhi)) - 0.075 * ((W / sinPhi) ** 0.4)) #FAO 56, p.227, eq.(3-18), slightly modified in ASCE-EWSI, 1-24-02, p.D-7, eq.(D.2)
         if Kb >= 0.15:   #FAO 56, p.227, eq.(3-20), slightly modified in ASCE-EWSI, 1-24-02, p.D-8, eq.(D.4)
@@ -252,13 +247,12 @@ def Rso(DOY , t , Ta , HP , P, lon, lat, lz , ele , T1 , RsOpt , kt, eaOPT ):
         Rso = max(0,Rso)
         return Rso
 #def Rsob to compute clear sky BEAM radiation (W/m2)
-def Rsob(DOY , t , Ta , HP , P , lon, lat , lz , ele , T1 , RsOpt , kt , eaOPT ): 
+def Rsob(DOY , t , Ta , RH, P , lon, lat , lz , ele , T1 , RsOpt , kt): 
     #Rsob = Clear sky BEAM solar radiation (W/m2)
     #DOY = Julian Day of Year
     #t = Standard clock time of midpoint of period without decimals (hr)
     #       e.g., 12:45 am = 45; 3:15 pm = 1515
     #Ta = Air temperature (C)
-    #HP = Humidity parameter, depends on eaOPT
     #Pmea = Measured barometric pressure (kPa)
     #lz = longitude of center of time zone (degrees West of Greenwich)
     #       75, 90, 105, 120 degrees for Eastern, Central, Mountain, and Pacific,
@@ -271,11 +265,6 @@ def Rsob(DOY , t , Ta , HP , P , lon, lat , lz , ele , T1 , RsOpt , kt , eaOPT )
     #   2 = Beer#s law (accounts for P, turbidity, and path length)
     #   3 = Accounts for P, atm moisture, turbidity, and path length)
     #Kt = Turbidity coefficient (Kt = 1 recommended, ASCE-EWRI, 1-24-02, p.D7) (unitless)
-    #eaOPT = Option to specify whether dewpoint temperature (Tdew, C) or relative humidity (RH, %)
-    #           is used to compute actual vapor pressure of the air (ea, kPa)
-    #           eaOPT = 1: RH (%) is used
-    #           eaOPT = 2: Twet (%) is used
-    #           eaOPT = 3: Tdew (%) is used
 
     #Variable definitions internal to compuing Ra
     # pi     #pi
@@ -366,7 +355,7 @@ def Rsob(DOY , t , Ta , HP , P , lon, lat , lz , ele , T1 , RsOpt , kt , eaOPT )
         return Rsob
     #OPTION 3: Atm moisture and turbidity
     if RsOpt = 3:
-        ea=aero.ea(P , Ta , HP , eaOPT)    
+        ea=aero.ea(P , Ta , RH)    
         W = 0.14 * ea * P + 2.1 #FAO 56, p.227, eq.(3-19)
         Kb = 0.98 * np.exp(((-0.00146 * P) / (kt * sinPhi)) - 0.075 * ((W / sinPhi) ** 0.4)) #FAO 56, p.227, eq.(3-18), slightly modified in ASCE-EWSI, 1-24-02, p.D-7, eq.(D.2)
 
@@ -381,14 +370,14 @@ def Rsob(DOY , t , Ta , HP , P , lon, lat , lz , ele , T1 , RsOpt , kt , eaOPT )
         Rsob = max(0,Rsob)
         return Rsob                              
 
-def Kbeam(Rs , KbConst , KbExp , DOY , t , Ta , P , lon , lat , lz , ele , T1 , RsOpt , kt , eaOPT ):
+def Kbeam(Rs , KbConst , KbExp , DOY , t , Ta , RH, P , lon , lat , lz , ele , T1 , RsOpt , kt):
     if Rs < 1: return 0
 
     # Rsobeam    #Theoretical clear sky direct beam irradiance (W m-2)
     # Rsoglobal  #Theoretical clear sky global irradiance (W m-2)
     
-    Rsobeam = Rsob(DOY , t , Ta , HP , P , lon, lat , lz , ele , T1 , RsOpt , kt , eaOPT)
-    Rsoglobal = Rso(DOY , t , Ta , HP , P , lon, lat , lz , ele , T1 , RsOpt , kt , eaOPT )
+    Rsobeam = Rsob(DOY , t , Ta , RH , P , lon, lat , lz , ele , T1 , RsOpt , kt)
+    Rsoglobal = Rso(DOY , t , Ta , RH , P , lon, lat , lz , ele , T1 , RsOpt , kt)
     if Rsoglobal < 1: return 0
 
     return (Rsobeam / Rsoglobal) * KbConst * (Rs / Rsoglobal) ** KbExp                  
