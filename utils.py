@@ -13,8 +13,12 @@ from picamera import PiCamera
 import logging 
 
 #image resolution
-ry,rx=3840,2160#160,128#256,192#3840,2160
-                
+ry,rx=960,544#160,128#256,192#3840,2160
+global ex   
+global gain
+ex = None    
+gain = None
+
 def gpscapture(GPS,ts):
     logging.info('GPS start %f',time.monotonic())
     gpsstring = None
@@ -63,15 +67,29 @@ def ircapture():
     return a
 
 def bgrcapture(ry,rx):
-  with PiCamera(resolution = (ry,rx)) as camera:
-    image = np.empty((ry*rx*3,),dtype=np.uint8)
-    #should also fix shutter_speed, analog_gain,digital_gain, exposure_mode,awb_mode,awb_gains
-    camera.start_preview()
-    print(camera.exposure_speed,camera.iso,camera.awb_mode,camera.awb_gains)
-    # Camera warm-up time
-    sleep(2)
-    camera.capture(image,'bgr')
+    global ex, gain
+    with PiCamera(resolution = (ry,rx)) as camera:
 
-    return image.reshape((rx,ry,3))
+        image = np.empty((ry*rx*3,),dtype=np.uint8)
+        #should also fix shutter_speed, analog_gain,digital_gain, exposure_mode,awb_mode,awb_gains
+        # Set ISO to the desired value
+        camera.iso = 100
+        # Wait for the automatic gain control to settle
+        sleep(2)
+        # Now fix the values
+        if ex is None:
+            ex = camera.exposure_speed
+        camera.shutter_speed = ex
+        camera.exposure_mode = 'off'
+        camera.awb_mode = 'off'
+        if gain is None:
+            gain = camera.awb_gains
+        camera.awb_gains = gain
+        camera.start_preview()
+        # Camera warm-up time
+        sleep(2)
+        camera.capture(image,'bgr')
+
+        return image.reshape((rx,ry,3))
 
 

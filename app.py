@@ -13,7 +13,6 @@ import numpy as np
 uart = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=10)
 
 from flask import Flask, render_template, send_file, make_response, url_for, Response, redirect, request
-
 from multiprocessing import Pool
 import logging
 
@@ -23,7 +22,7 @@ logging.info(gpsPath)
 sys.path.insert(0,gpsPath)
 
 import adafruit_gps
-
+    
 home = os.path.join("/home","pi")
 p = os.path.join(home,'CookIRCamET','Images')
 web = os.path.join(home,'CookIRCamET','static')
@@ -100,6 +99,6 @@ def index():
       
       return render_template('camera.html', time=current_time+' '+current_spot)
 
-if __name__ == '__main__':      
+if __name__ == '__main__':
       app.run(debug=False,host='0.0.0.0')
       
