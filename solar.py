@@ -222,7 +222,7 @@ def Rso(DOY , t , Ta , RH , P, lon, lat, lz , ele , T1 , RsOpt , kt):
     #Rso Options (1, 2, or 3)
     
     #OPTION 1: SIMPlE
-    if RsOpt = 1:
+    if RsOpt == 1:
         Rso = (0.75 + (2 * 10 ** -5) * ele) * ra #(MJ/m2/t1), FAO 56, p.51, eq.37
         return Rso
     #Compute P and sinphi, which are required for Options 2 and 3
@@ -231,10 +231,10 @@ def Rso(DOY , t , Ta , RH , P, lon, lat, lz , ele , T1 , RsOpt , kt):
     #Compute sinphi, the sine of sun angle above horizon (path length)
     sinPhi = np.sin(latr) * np.sin(d) + np.cos(latr) * np.cos(d) * np.cos(H)     #FAO 56, p.226, eq.(3-15), minimum  = 0.10
     if sinPhi < 0.1: sinPhi = 0.1
-    if RsOpt = 2:
+    if RsOpt == 2:
         Rso = ra * np.exp((-0.0018 * P) / (kt * sinPhi))    #(MJ/m2/t1), FAO 56, p.226, eq.(3-14)
         return Rso
-    if RsOpt = 3:
+    if RsOpt == 3:
         ea=aero.ea(P , Ta , RH)
         W = 0.14 * ea * P + 2.1 #FAO 56, p.227, eq.(3-19)
         Kb = 0.98 * np.exp(((-0.00146 * P) / (kt * sinPhi)) - 0.075 * ((W / sinPhi) ** 0.4)) #FAO 56, p.227, eq.(3-18), slightly modified in ASCE-EWSI, 1-24-02, p.D-7, eq.(D.2)
