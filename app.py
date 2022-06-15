@@ -55,13 +55,13 @@ def capture():
       #current_spot0 = None
       #current_time_fix = None
 
-      if current_spot0:
+      if current_spot0 is not None:
             current_spot = current_spot0
       else:
             current_spot = 'nofix'
-      if current_time_fix:
+      if current_time_fix is not None:
             #yes! gps fix
-            current_time=current_time_fix
+            current_time = current_time_fix
       pool = Pool(processes=2)
       res = pool.map(smap,[bgrpcapture,ircapture])
 
