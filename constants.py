@@ -37,77 +37,93 @@ class inputs:
         for f in os.listdir(p):
             if 'parameters' in f and f[-4:]=='.csv':
                 parameters = read_csv(os.path.join(p,f))
-#defaults
-#user adjustable parameters
-Cx = 90#Empirical constant  s m-1
-b = 0.012#Empirical constant = 0.012 or b = 0.012[1 + cos(psiw)],
-#       where psiw is wind direction, ccw from north
-c = 0.0025#Empirical constant = 0.0025        
-#Monin-Obukhov parameters
-dhc = .67#displacement height/canopy height C&N98, K95 say 0.65
-zomhc = 0.125#momemtun roughness over canopy height K95
-zohzom = 1#heat roughness over momentum roughness C&N say .2,
-# K95 say exp(-2),
-# K99 set equal for series model
-#bare soil roughness
-hs = .4e-3 #m
-zombs = 1 #m
-zohzom = np.exp(-4.5) #from Stewart paper
-#Stewart, J. B., W. P. Kustas, K. S. Humes, W. D. Nichols, M. S.
-#Moran, and H. A. R. de Bruin, 1994: Sensible heat fluxradiometric
-#surface temperature relationship for eight semiarid
-#areas. J. Appl. Meteor., 33, 1110–1117.
-#soil heat flux
-GRnDay = -0.1
-GRnNight = -0.5
-aG = -0.31
-#canopy stomatal resistance s/m
-rcDay = 50
-rcNight = 200
-#soil albedo vis/nir/wet/dry
-rhosNir = 0.15
-rhosNis = 0.25
-#soil emissivity
-emisSoil = 0.98
-#residue albedo
-rhorNir = 0.15 
-rhorVis = 0.25
-#residue emissivity
-emisRes = 0.98
-#leaf absorbance/emittance/reflectance
-emisVeg = 0.98
-zetaVis = 0.85#Leaf shortwave absorption in the visible (PAR) spectra (no units)
-zetaNir = 0.2#Leaf shortwave absorption in the near infrared spectra (no units)
-#leaf angle param
-XE = 1.0
-#canopy lw extinction
-kappaIR = 0.95
-#solar params
-PISI = 0.457#Fraction of visible shortwave irriadiance in global irradiance;
-    #~0.457 at Bushland, which agrees with Meek et al. (1984) for other Western US locations
-KbVisConst = 1.034#Constant used in empirical equation to calculate the fraction
-             # of direct beam irradiance in the visible (PAR) band (no units)
-KbVisExp = 2.234#Exponent used in empirical equation to calculate the fraction
-           # of direct beam irradiance in the visible (PAR) band (no units)
-KbNirConst = 1.086#Constant used in empirical equation to calculate the fraction
-             # of direct beam irradiance in the near-infrared (NIR) band (no units)
-KbNirExp = 2.384#Exponent used in empirical equation to calculate the fraction
-           #of direct beam irradiance in the near-infrared (NIR) band (no units)
-#don't consider residue a separate class
-modeltype = '2SEB'
-#do consider residue a separate class
-#modeltype = '3SEB'
-lat = np.nan#(dec deg)
-lon = np.nan#(dec deg)
-ele = np.nan#elevation (m)
-#Measurement heights (speed and temp)
-zu = 2
-zt = 2
-rowwidth = .6#row width (m)
-rowdir = # degrees from N, clockwise
-Lz = -120#longitud
-
+                #defaults
+                #user adjustable parameters
+                self.Cx = 90#Empirical constant  s m-1
+                self.b = 0.012#Empirical constant = 0.012 or b = 0.012[1 + cos(psiw)],
+                #       where psiw is wind direction, ccw from north
+                self.c = 0.0025#Empirical constant = 0.0025        
+                #Monin-Obukhov parameters
+                self.dhc = .67#displacement height/canopy height C&N98, K95 say 0.65
+                self.zomhc = 0.125#momemtun roughness over canopy height K95
+                self.zohzomhc = 1#heat roughness over momentum roughness C&N say .2,
+                # K95 say exp(-2),
+                # K99 set equal for series model
+                #bare soil roughness
+                self.hs = .4e-3 #m
+                self.zombs = 1 #m
+                self.zohzombs = np.exp(-4.5) #from Stewart paper
+                #Stewart, J. B., W. P. Kustas, K. S. Humes, W. D. Nichols, M. S.
+                #Moran, and H. A. R. de Bruin, 1994: Sensible heat fluxradiometric
+                #surface temperature relationship for eight semiarid
+                #areas. J. Appl. Meteor., 33, 1110–1117.
+                #soil heat flux
+                self.GRnDay = -0.1
+                self.GRnNight = -0.5
+                self.aG = -0.31
+                #canopy stomatal resistance s/m
+                self.rcDay = 50
+                self.rcNight = 200
+                #soil albedo vis/nir/wet/dry
+                self.rhosNir = 0.15
+                self.rhosNis = 0.25
+                #soil emissivity
+                self.emisSoil = 0.98
+                #residue albedo
+                self.rhorNir = 0.15 
+                self.rhorVis = 0.25
+                #residue emissivity
+                self.emisRes = 0.98
+                #leaf absorbance/emittance/reflectance
+                self.emisVeg = 0.98
+                self.zetaVis = 0.85#Leaf shortwave absorption in the visible (PAR) spectra (no units)
+                self.zetaNir = 0.2#Leaf shortwave absorption in the near infrared spectra (no units)
+                #leaf angle param
+                self.XE = 1.0
+                #canopy lw extinction
+                self.kappaIR = 0.95
+                #solar params
+                self.PISI = 0.457#Fraction of visible shortwave irriadiance in global irradiance;
+                #~0.457 at Bushland, which agrees with Meek et al. (1984) for other Western US locations
+                self.KbVisConst = 1.034#Constant used in empirical equation to calculate the fraction
+                # of direct beam irradiance in the visible (PAR) band (no units)
+                self.KbVisExp = 2.234#Exponent used in empirical equation to calculate the fraction
+                # of direct beam irradiance in the visible (PAR) band (no units)
+                self.KbNirConst = 1.086#Constant used in empirical equation to calculate the fraction
+                # of direct beam irradiance in the near-infrared (NIR) band (no units)
+                self.KbNirExp = 2.384#Exponent used in empirical equation to calculate the fraction
+                #of direct beam irradiance in the near-infrared (NIR) band (no units)
+                #don't consider residue a separate class
+                self.Kt = 
+                self.modeltype = '2SEB'
+                #do consider residue a separate class
+                #modeltype = '3SEB'
+                self.lat = np.nan#(dec deg)
+                self.lon = np.nan#(dec deg)
+                self.ele = np.nan#elevation (m)
+                #Measurement heights (speed and temp)
+                self.zu = 2
+                self.zt = 2
+                self.rowwidth = .6#row width (m)
+                self.rowdir = # degrees from N, clockwise
+                self.lz = -120#longitud
+                self.tstep =
+                
     def read_indata(self):
         for f in os.listdir(p):
             if 'timeseries' in f and f[-4:]=='.csv':
                 timeseries = read_csv(os.path.join(p,f))
+                self.doy
+                self.t
+                self.P
+                self.Ta
+                self.RH
+                #compute ea
+                self.RsOpt
+                self.Rs
+            if 'cvfractions' in f and f[-4:]=='.csv':
+                cvfractions = read_csv(os.path.join(p,f))
+                self.f_veg_sun = 
+                self.f_veg_shade = 
+                self.f_soil_sun = 
+                self.f_soil_shade = 

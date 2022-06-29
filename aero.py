@@ -40,7 +40,6 @@ def rho_a(T,e,P):#density of moist air in kg/m3 - T in C, e vapor pressure kPa, 
 def gamm_psy(P,T):#psychrometric constant kPa/C
     return ((1.013 * 10 ** -6) * P) / (0.622 * latent(T)) 
 
-
 def Twet(Ta , ea, P): 
     #def Twet to calculate wet bulb temperature of the air.
 
@@ -60,169 +59,168 @@ def Twet(Ta , ea, P):
     es = esa(Ta)
     return Ta - ((es - ea) / (gamma + delta))
 
-def roughness_lengths(h,fveg):
-    if fveg>0:
-        #Calculate d, zom, zoh
-        d = dhc * h
-        zom = zomhc * h
-        zoh = zohzom * zom
-    else:
-        d = dhs * h
-        zom = zomhs * h
-        zoh = zohzom * zom
+class resistances:
+    def __init__(self, inputs_obj):
+        self.io = inputs_obj
+        #zu = height of wind speed measurement (m)
+        #h = canopy height (m)/soil roughness
+        #fveg = veg fraction
+        #uz = Wind speed measured at height z (m/s)
+        #Ta = Air temperature (C)
+        #Ts = Soil temperature (C)
+        #Tc = Canopy temperature (C)
+        #Tr = Residue temperature (C)
+        #Trad = Radiometric surface temperature (C)
+        #nmax = Maximum number of interations
+        #t = Tolerance of |rahMOST(n) - rahMOST(n+1)| where n is the nth interation
+
+        #Variables internal to this function:
+        #d      #Zero plane displacement (m)
+        #zom    #Roughness length for momentum transfer (m)
+        #zoh    #Roughness length for heat diffusion (m)
+        #n     #Iteration number
+        #uf     #Friction velocity (m s-1)
+        #PsiM   #Momentum stability correction (dimensionless)
+        #PsiH   #Sensible heat stability correction (dimensionless)
+        #rah    #Bulk Aerdynamic resistance (s m-1)
+        #dT     #Air-surface temperature difference (Ta-Ts) (C)
+        #Toh    #Toh is the aerodynamic surface temperature (C)
+        #L      #Monin-Obukov length (m)
+        #X      #Used to compute psih and psim in unstable conditions
+        #u      #Wind speed adjusted over crop ( m s-1)
+        self.hc = hc
+        self.hr = hr
+        self.hs = hs
+        self.LAI = LAI
+        self.LAIL = LAI*row/wc
+        self.uz = uz
+        self.Ta = Ta
+        self.Ts = Ts
+        self.Tr = Tr
+        self.Tc = Tc
+        self.Trad = Trad
+        self.nmax = nmax
+        self.tol = tol
+        self.fveg = fveg
+        self.fres = fres
+        self.fsoil = fsoil
         
-    return d, zom, zoh
-    
+        self.mask_veg = self.fveg>0 && self.hr<=self.hc
+        self.mask_bare = self.fveg<=0 && self.fres<=0
+        self.mask_res = self.fveg<=0 && self.fres>0
+        self.mask_tall_res = self.fveg>0 && self.hr>self.hc
 
-def rahmost(h , LAI , uz, Ta , Tr , nmax , tol, fveg): 
-    #def to compute aerodynamic resistance (s/m) using Monin-Obukov (1954)
-    #Similarity Theory (MOST), where correction coefficients for unstable and stable conditions
-    #are given by Paulson (1970) and Webb (1970)
+        self.d, self.zom, self.zoh = self.roughness_lengths()
+        self.rah =
+        self.rsh =
+        self.rx =
+        self.rsh =
+        
+    def roughness_lengths(self):
+        d = np.zeros(self.Ta.shape)
+        zom = np.zeros(self.Ta.shape)
+        zoh = np.zeros(self.Ta.shape)
+        
+        d[self.mask_veg] = dhc * self.hc[self.mask_veg]
+        zom[self.mask_veg] = zomhc * self.hc[self.mask_veg]
+        zoh[self.mask_veg] = zohzomc[self.mask_veg] * self.zom[self.mask_veg]
+        
+        d[self.mask_tall_res] = dhr * self.hr[self.mask_tall_res]
+        zom[self.mask_tall_res] = zomhr * self.hr[self.mask_tall_res]
+        zoh[self.mask_tall_res] = zohzomr * self.zom[self.mask_tall_res]
 
-    #zu = height of wind speed measurement (m)
-    #h = canopy height (m)/soil roughness
-    #fveg = veg fraction
-    #uz = Wind speed measured at height z (m/s)
-    #Ta = Air temperature (C)
-    #Tr = Radiometric surface temperature (C)
-    #nmax = Maximum number of interations
-    #t = Tolerance of |rahMOST(n) - rahMOST(n+1)| where n is the nth interation
+        d[self.mask_res] = dhr * self.hr[self.mask_res]
+        zom[self.mask_res] = zomhr * self.hr[self.mask_res]
+        zoh[self.mask_res] = zohzomr * self.zom[self.mask_res]
 
-    #Variables internal to this function:
-    #d      #Zero plane displacement (m)
-    #zom    #Roughness length for momentum transfer (m)
-    #zoh    #Roughness length for heat diffusion (m)
-    #n     #Iteration number
-    #uf     #Friction velocity (m s-1)
-    #PsiM   #Momentum stability correction (dimensionless)
-    #PsiH   #Sensible heat stability correction (dimensionless)
-    #rah    #Bulk Aerdynamic resistance (s m-1)
-    #dT     #Air-surface temperature difference (Ta-Ts) (C)
-    #Toh    #Toh is the aerodynamic surface temperature (C)
-    #L      #Monin-Obukov length (m)
-    #X      #Used to compute psih and psim in unstable conditions
-    #u      #Wind speed adjusted over crop ( m s-1)
+        d[self.mask_bare] = dhs * self.hs[self.mask_bare]
+        zom[self.mask_bare] = zomhs * self.hs[self.mask_bare]
+        zoh[self.mask_bare] = zohzoms * self.zom[self.mask_bare]
 
-    d, zom, zoh = roughnesslengths(h,fveg)
-    
-    PsiM = 0
-    PsiH = 0
-    uf = vonk * u / ((np.log((zu - d) / zom)) - PsiM)
-    rahmost = ((np.log((zu - d) / (zoh))) - PsiH) / (vonk * uf)
-    dT = Ta - Tr
+        return d, zom, zoh
 
-    if np.abs(dT) < 0.01: dT = 0.01
+    def rahmost(self): 
+        #def to compute aerodynamic resistance (s/m) using Monin-Obukov (1954)
+        #Similarity Theory (MOST), where correction coefficients for unstable and stable conditions
+        #are given by Paulson (1970) and Webb (1970)
 
-    Toh = Ta - dT
-    n = 1
-
-    while n < nmax and np.abs(rah - rahmost) > tol:
-        rah = rahmost
-        L = rah * (uf ** 3) * (Toh + Tk) / (g * vonk * dT)
-
-        if L > 0:  #Stable conditions
-
-            PsiH = -5 * (zu - d) / L
-            PsiM = -5 * (zu - d) / L
-
-        else:    #Unstable conditions
-
-            X = (1 - 16 * (zu - d) / L) ** 0.25
-            PsiH = 2 * np.log((1 + (X ** 2)) / 2)
-            PsiM = 2 * np.log((1 + X) / 2) + np.log((1 + (X ** 2)) / 2) - 2 * np.atan(X) + pi / 2
-
+        PsiM = 0
+        PsiH = 0
         uf = vonk * u / ((np.log((zu - d) / zom)) - PsiM)
         rahmost = ((np.log((zu - d) / (zoh))) - PsiH) / (vonk * uf)
-        n = n + 1
+        dT = Ta - Tr
 
-    if n == nmax:
-        uf = vonk * u / ((np.log((zu - d) / zom)))
-        rahmost = ((np.log((zu - d) / (zoh)))) / (vonk * uf)
+        if np.abs(dT) < 0.01: dT = 0.01
 
-def rx(hc, uz , s , LAI , row , wc, fveg): 
-    #def rx to compute resistance of heat transport between canopy and canopy
-    #displacement height; taken from Norman et al. (1995) Appendix A
+        Toh = Ta - dT
+        n = 1
 
-    #uz = Wind speed measured over crop or reference at height zu (m/s)
-    #hc = canopy height (m)
-    #dhc = d/hc, where d is zero plane displacement (m)
-    #zomhc = zom/hc, where zom is roughness length for momentum transfer (m)
-    #zohzom = zoh/zom, where zoh is the scalar roughness length for heat diffusion
-    #z = Height above ground of wind speed measurment (m)
-    #s = Effective leaf diameter (=4*Leaf area / leaf perimeter) (m)
-    #LAI = Leaf area index (m2 m-2)
-    #row = Crop row spacing (m)
-    #wc = Vegetation row width (m)
-    #d      #Zero plane displacement (m)
-    #zom    #Roughness length for momentum transfer (m)
-    #zoh    #Roughness length for heat diffusion (m)
-    #Uz     #Wind speed over crop surface (m s-1)
+        while n < nmax and np.abs(rah - rahmost) > tol:
+            rah = rahmost
+            L = rah * (uf ** 3) * (Toh + Tk) / (g * vonk * dT)
 
-    d, zom, zoh = roughnesslengths(h,fveg)
+            if L > 0:  #Stable conditions
 
-    #Convert field LAI to local LAI
-    #LAIL   #Local LAI (i.e., within vegeation row) (m2 m-2)
-    LAIL = LAI * row / wc
+                PsiH = -5 * (zu - d) / L
+                PsiM = -5 * (zu - d) / L
 
-    #Variables internal to this function
-    #Uc     #Wind speed at top of canopy (m s-1)
-    #A      #Empirical factor
-    #Udz    #Wind speed at momentum height d + zom (m s-1)
-    #PsiM   #Stability correction for momentum at top of canopy,
-    #                    assumed negligible due to roughness effects in the sublayer
+            else:    #Unstable conditions
 
-    PsiM = 0
+                X = (1 - 16 * (zu - d) / L) ** 0.25
+                PsiH = 2 * np.log((1 + (X ** 2)) / 2)
+                PsiM = 2 * np.log((1 + X) / 2) + np.log((1 + (X ** 2)) / 2) - 2 * np.atan(X) + pi / 2
 
-    uc = u * (np.log((hc - d) / zom)) / ((np.log((zu - d) / zom)) - PsiM)
-    A = 0.28 * (LAIL ** (2 / 3)) * (hc ** (1 / 3)) * (s ** (-1 / 3))
-    udz = uc * np.exp(-A * (1 - ((d + zom) / hc)))
-    if udz < 0.1: udz = 0.1
-    rx = (Cx / LAIL) * ((s / udz) ** 0.5)
-    return rsh
+            uf = vonk * u / ((np.log((zu - d) / zom)) - PsiM)
+            rahmost = ((np.log((zu - d) / (zoh))) - PsiH) / (vonk * uf)
+            n = n + 1
+
+        if n == nmax:
+            uf = vonk * u / ((np.log((zu - d) / zom)))
+            rahmost = ((np.log((zu - d) / (zoh)))) / (vonk * uf)
+
+    def rx(self): 
+        #def rx to compute resistance of heat transport between canopy and canopy
+        #displacement height; taken from Norman et al. (1995) Appendix A
+
+        #Variables internal to this function
+        #Uc     #Wind speed at top of canopy (m s-1)
+        #A      #Empirical factor
+        #Udz    #Wind speed at momentum height d + zom (m s-1)
+        #PsiM   #Stability correction for momentum at top of canopy,
+        #                    assumed negligible due to roughness effects in the sublayer
+
+        PsiM = 0
+
+        uc = u * (np.log((hc - d) / zom)) / ((np.log((zu - d) / zom)) - PsiM)
+        A = 0.28 * (LAIL ** (2 / 3)) * (hc ** (1 / 3)) * (s ** (-1 / 3))
+        udz = uc * np.exp(-A * (1 - ((d + zom) / hc)))
+        if udz < 0.1: udz = 0.1
+        rx = (Cx / LAIL) * ((s / udz) ** 0.5)
+        return rsh
+
+    def rsh(self): 
+        #def rsh to compute resistance of heat transport between soil and canopy displacement height
+        #Taken from Norman et al. (1995) Appendix B AND Kustas and Norman (1999)
+
+        #Variables internal to this function
+        #Uc     #Wind speed at top of canopy (m s-1)
+        #A      #Empirical factor
+        #Us     #Wind speed just above the soil surface (m s-1)
+        #PsiM   #Stability correction for momentum at top of canopy,
+        #                    assumed negligible due to roughness effects in the sublayer
+
+        PsiM = 0
+        uc = u * (np.log((hc - d) / zom)) / ((np.log((zu - d) / zom)) - PsiM)
+        A = 0.28 * (LAIL ** (2 / 3)) * (hc ** (1 / 3)) * (s ** (-1 / 3))
+        us = uc * np.exp(-A * (1 - (0.05 / hc)))
+        rsh = 1 / (c * ((np.abs(Ts - Tc)) ** (1 / 3)) + b * us)
+
+        return rsh
+
+    def rrh_stand(self):
+        #standing residue thermal resistance per Aiken 2003
+        return rrsh
     
-def rsh(h , zu , s , LAI , row , wc, Ts , Tc, fveg ) 
-    #def rsh to compute resistance of heat transport between soil and canopy displacement height
-    #Taken from Norman et al. (1995) Appendix B AND Kustas and Norman (1999)
-
-    #uref = Wind speed measured over reference surface at height z (m/s)
-    #hcref = Height of reference surface where wind speed was measured(m)
-    #hc = Canopy height (m)
-    #dhc = d/hc, where d is zero plane displacement (m)
-    #zomhc = zom/hc, where zom is roughness length for momentum transfer (m)
-
-    #zohzom = zoh/zom, where zoh is the scalar roughness length for heat diffusion
-    #z = Height above ground of wind speed measurment (m)
-    #s = Effective leaf diameter (=4*Leaf area / leaf perimeter) (m)
-    #LAI = Leaf area index (m2 m-2)
-    #row = Crop row spacing (m)
-    #wc = Vegetation row width (m)
-
-    #Ts = Soil temperature (C)
-    #Tc = Canopy temperature (C)
-
-    #d      #Zero plane displacement (m)
-    #zom    #Roughness length for momentum transfer (m)
-    #zoh    #Roughness length for heat diffusion (m)
-    #Uz     #Wind speed over crop surface (m s-1)
-
-    #Calculate d, zom, zoh
-    d, zom, zoh = roughnesslengths(h,fveg)
-
-    #Convert field LAI to local LAI
-    #LAIL   #Local LAI (i.e., within vegeation row) (m2 m-2)
-    LAIL = LAI * row / wc
-
-    #Variables internal to this function
-    #Uc     #Wind speed at top of canopy (m s-1)
-    #A      #Empirical factor
-    #Us     #Wind speed just above the soil surface (m s-1)
-    #PsiM   #Stability correction for momentum at top of canopy,
-    #                    assumed negligible due to roughness effects in the sublayer
-
-    PsiM = 0
-    uc = u * (np.log((hc - d) / zom)) / ((np.log((zu - d) / zom)) - PsiM)
-    A = 0.28 * (LAIL ** (2 / 3)) * (hc ** (1 / 3)) * (s ** (-1 / 3))
-    us = uc * np.exp(-A * (1 - (0.05 / hc)))
-    rsh = 1 / (c * ((np.abs(Ts - Tc)) ** (1 / 3)) + b * us)
-
-    return rsh
+    def rrh_flat(self):
+        #flat residue thermal resistance per Lagos 2009
+        return rrfh
