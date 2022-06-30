@@ -9,6 +9,10 @@ import os
 import numpy as np
 import logging 
 
+def P_from_z(z):
+    #z elevation msl
+    return 101.3*((293-0.0065*z)/293)**5.26#kPa ASCE 70 eqn 3
+
 def ea(P , Ta , RH):
     #def ea to compute actual vapor pressure of the air (kPa)
     #P = Barometric pressure (kPa)
@@ -62,18 +66,6 @@ def Twet(Ta , ea, P):
 class resistances:
     def __init__(self, inputs_obj):
         self.io = inputs_obj
-        #zu = height of wind speed measurement (m)
-        #h = canopy height (m)/soil roughness
-        #fveg = veg fraction
-        #uz = Wind speed measured at height z (m/s)
-        #Ta = Air temperature (C)
-        #Ts = Soil temperature (C)
-        #Tc = Canopy temperature (C)
-        #Tr = Residue temperature (C)
-        #Trad = Radiometric surface temperature (C)
-        #nmax = Maximum number of interations
-        #t = Tolerance of |rahMOST(n) - rahMOST(n+1)| where n is the nth interation
-
         #Variables internal to this function:
         #d      #Zero plane displacement (m)
         #zom    #Roughness length for momentum transfer (m)
@@ -88,33 +80,13 @@ class resistances:
         #L      #Monin-Obukov length (m)
         #X      #Used to compute psih and psim in unstable conditions
         #u      #Wind speed adjusted over crop ( m s-1)
-        self.hc = hc
-        self.hr = hr
-        self.hs = hs
-        self.LAI = LAI
-        self.LAIL = LAI*row/wc
-        self.uz = uz
-        self.Ta = Ta
-        self.Ts = Ts
-        self.Tr = Tr
-        self.Tc = Tc
-        self.Trad = Trad
-        self.nmax = nmax
-        self.tol = tol
-        self.fveg = fveg
-        self.fres = fres
-        self.fsoil = fsoil
         
-        self.mask_veg = self.fveg>0 && self.hr<=self.hc
-        self.mask_bare = self.fveg<=0 && self.fres<=0
-        self.mask_res = self.fveg<=0 && self.fres>0
-        self.mask_tall_res = self.fveg>0 && self.hr>self.hc
+        self.mask_veg = self.io.fveg>0 and self.io.hr<=self.io.hc
+        self.mask_bare = self.io.fveg<=0 and self.io.fres<=0
+        self.mask_res = self.io.fveg<=0 and self.io.fres>0
+        self.mask_tall_res = self.io.fveg>0 and self.io.hr>self.io.hc
 
         self.d, self.zom, self.zoh = self.roughness_lengths()
-        self.rah =
-        self.rsh =
-        self.rx =
-        self.rsh =
         
     def roughness_lengths(self):
         d = np.zeros(self.Ta.shape)
