@@ -10,18 +10,24 @@ import os
 import numpy as np
 import logging 
 
-def G(R):
+def Rnminmax(year_doy,Rn):
+    days = np.unique(year_doy)
+    Rnmax = np.zeros(Rn.shape)
+    Rnmin = np.zeros(Rn.shape)    
+    for i in range(days.shape[0]):
+        mask = year_doy[:,0]==days[i,0] & year_doy[:,1]==days[i,1]
+        Rmax_day = np.max(Rn[mask])
+        Rmin_day = np.min(Rn[mask])
+        Rnmax[mask]=Rmax_day
+        Rnmin[mask]=Rmin_day
+    return Rnmax, Rnmin
 
+def G(R):
     #R (soil or residue) 24 hour time series
     #G (soil or residue) 24 hour time series
     #from Colaizzi 2016    
-    Rmax = np.max(R)
-    Rmin = np.min(R)
+    Rmax, Rmin = Rnminmax(time, R)
     return (R-Rmin)/(Rmax-Rmin)*(aG*Rmax+Rmin)-Rmin
-    #if R < 0:
-    #    return R * GRnday
-    #else:
-    #    return R * GRnnight
     
 def LE(H,Rn,G):
     return Rn-G-H
@@ -31,26 +37,29 @@ def LEs(Rns,Hs,Gs):
     return Rns-Hs-Gs
 def LEs(Rnr,Hr,Gr):
     return Rnr-Hr-Gr
-
 def H(Tac,Ta,ra):
     return aero.rho_a(Tac)*(Tac-Ta)/ra*c_p
 def Hc(Tac,Tc,rx):
     return aero.rho_a(Tac)*(Tc-Tac)/rx*c_p
 def Hs(Tac,Ts,ra,fs):
     return aero.rho_a(Tac)*(Ts-Tac)/rs*c_p
-def Hr(Tac,Tr,ra,fs):
-    return aero.rho_a(Tac)*(Tr-Tac)/rs*c_p
+def Hr(Tac,Tr,rr,fs):
+    return aero.rho_a(Tac)*(Tr-Tac)/rr*c_p
 
-def Lsky(P , Ta , RH): 
+class rad_fluxes:
+    def __init__(self):
+        #P = Barometric pressure (kPa)
+        #Ta = Air temperature, usually around 2 m height (C)
+        #RH = RH
+        #Variable definitions internal to this function
+        #ea Actual vapor pressure of the air (kPa)
+        #use fractions from computer vision to construct view factors
+        #
+        fdhc =
+        
+    def Lsky(P , Ta , RH): 
     #def Lsky to calculate hemispherical downwelling longwave irradiance from the sky (W m-2).
-    #P = Barometric pressure (kPa)
-    #Ta = Air temperature, usually around 2 m height (C)
-    #RH = RH
-
-    #Variable definitions internal to this function
-    #ea1     #Actual vapor pressure of the air (kPa)
     # emisatm    #Atmospheric emissivity
-    # boltz     #Stephan-Boltzmann constant (W m-2 K-4)
 
     ea1 = aero.ea(P, Ta, RH)
 

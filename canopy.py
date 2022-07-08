@@ -20,9 +20,9 @@ class canopy:
 
 
     def kb(theta):
-        return (np.sqrt(XE ** 2 + (np.tan(thetar)) ** 2)) / (XE + 1.774 * (XE + 1.182) ** -0.733)
+        return (np.sqrt(XE ** 2 + (np.tan(theta)) ** 2)) / (XE + 1.774 * (XE + 1.182) ** -0.733)
 
-    def taudir(thetas , psis , hc , wc , row , LAI , rhosoil ): 
+    def taudir(theta , psi, hc , wc , row , LAI , rhosoil ): 
         #def taudir to compute transmittance of DIRECT beam radiation through the canopy
         #using procedure of Campbell and Norman (1998), Chapter 15 (CN98)
 

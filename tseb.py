@@ -17,16 +17,33 @@ p = os.path.join(home,'CookIRCamET','Working')
 
 #read from config file and input file
 data = inputs()
-data.timeseries
-data.parameters
+resistance = aero.resistances(data)
+radiation = solar.radiation(data)
+canopy = canopy.resistances(data)
+fluxes = fluxes.resistances(data)
 
-#calculate ea for all steps
-ea = aero.ea()
-#calculate downwelling longwave Ld if unavailable
-Ld = fluxes.()
+#calculate roughness params
+resistance.roughness_lengths()
+#calculate resistances
+resistance.roughness_lengths()
+resistance.rah_calc()
+resistance.rx_calc()
+resistance.rs_calc()
+#calculate solar radiation
+radiation.solar_angles()
+radiation.solar_angles()
+radiation.solar_angles()
+radiation.solar_angles()
+
 #calculate/partition downwelling shortwave Sd
 fvis_diff, fvis_diff, fvis_diff, fvis_diff =
+
+#calculate downwelling longwave Ld if unavailable
+Ld = fluxes.()
+
 #calculate net radiation fluxes hitting each component
+
+
 #calculate aerodynamic resistances 
 #calculate ground heat flux, sensible heat flux, latent heat flux
 

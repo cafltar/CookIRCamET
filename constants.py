@@ -30,7 +30,8 @@ R_d = 287.04
 class inputs:
     def __init__(self):
         self.read_params()
-        self.read_indata()
+        self.read_can()
+        self.read_met()
         return None
 
     def read_params(self):
@@ -104,26 +105,53 @@ class inputs:
                 #Measurement heights (speed and temp)
                 self.zu = 2
                 self.zt = 2
-                self.rowwidth = .6#row width (m)
+                self.rowc = .6#row width (m)
                 self.rowdir = # degrees from N, clockwise
-                self.lz = -120#longitud
+                self.lz = -120#longitude of tz center
                 self.tstep =
-                
-    def read_indata(self):
+                self.tol = #tolerance for rah calc 
+    def read_met(self):
         for f in os.listdir(p):
             if 'timeseries' in f and f[-4:]=='.csv':
                 timeseries = read_csv(os.path.join(p,f))
                 self.doy
                 self.t
-                self.P
+                self.P =
+                self.P[np.isnan(self.P)]=aero.P_from_z(self.ele)
                 self.Ta
                 self.RH
-                #compute ea
+                #compute ea, esa
+                self.ea = aero.ea(self.P , self.Ta , self.RH)
+                self.esa = aero.esa(self.Ta)
                 self.RsOpt
                 self.Rs
+                self.latent = aero.latent(self.Ta)
+                self.rho_a = aero.rho_a(self.Ta,self.ea,self.P)
+                self.LAI =
+                self.wc =
+                self.wc[np.isnan(self.wc)]=(self.f_veg_sun[np.isnan(self.wc)]+self.f_veg_shade[np.isnan(self.wc)])*self.rowc[np.isnan(self.wc)]
+                self.hc =
+                self.LAIL = self.LAIL*self.rowc/self.wc
+                self.precip =
+                self.irrig =
+    def read_can(self):
+        for f in os.listdir(p):
             if 'cvfractions' in f and f[-4:]=='.csv':
                 cvfractions = read_csv(os.path.join(p,f))
                 self.f_veg_sun = 
                 self.f_veg_shade = 
                 self.f_soil_sun = 
                 self.f_soil_shade = 
+                self.f_res_sun = 
+                self.f_res_shade = 
+                self.T_veg_sun = 
+                self.T_veg_shade = 
+                self.T_soil_sun = 
+                self.T_soil_shade = 
+                self.T_res_sun = 
+                self.T_res_shade = 
+                self.T_rad = self.f_veg_sun*self.T_veg_sun+self.f_veg_shade*self.T_veg_shade+self.f_soil_sun*self.T_soil_sun+self.f_soil_shade*self.T_soil_shadeself.f_res_sun*self.T_res_sun+self.f_res_shade*self.T_res_shade
+ 
+                self.T_s = (self.f_soil_sun*self.T_soil_sun+self.f_soil_shade*self.T_soil_shade+self.f_res_sun*self.T_res_sun+self.f_res_shade*self.T_res_shade)/(self.f_soil_sun+self.f_soil_shade+self.f_res_sun+self.f_res_shade)
+ 
+                self.T_c = (self.f_veg_sun*self.T_veg_sun+self.f_veg_shade*self.T_veg_shade)/(self.f_veg_sun+self.f_veg_shade)

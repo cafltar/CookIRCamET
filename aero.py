@@ -109,48 +109,49 @@ class resistances:
         zom[self.mask_bare] = zomhs * self.hs[self.mask_bare]
         zoh[self.mask_bare] = zohzoms * self.zom[self.mask_bare]
 
-        return d, zom, zoh
-
-    def rahmost(self): 
+        self.d=d
+        self.zom=zom
+        self.zoh=zoh
+        
+    def rah_calc(self): 
         #def to compute aerodynamic resistance (s/m) using Monin-Obukov (1954)
         #Similarity Theory (MOST), where correction coefficients for unstable and stable conditions
         #are given by Paulson (1970) and Webb (1970)
 
-        PsiM = 0
-        PsiH = 0
-        uf = vonk * u / ((np.log((zu - d) / zom)) - PsiM)
-        rahmost = ((np.log((zu - d) / (zoh))) - PsiH) / (vonk * uf)
-        dT = Ta - Tr
+        PsiM = np.zeros(self.io.T_rad.shape)
+        PsiH = np.zeros(self.io.T_rad.shape)
+        uf = vonk * self.io.u / ((np.log((self.io.zu - self.d) / self.zom)) - PsiM)
+        rahmost = ((np.log((self.io.zu - d) / (self.zoh))) - PsiH) / (vonk * uf)
+        dT = self.io.Ta - self.io.T_rad
 
         if np.abs(dT) < 0.01: dT = 0.01
 
-        Toh = Ta - dT
+        Toh = self.io.Ta - dT
         n = 1
 
-        while n < nmax and np.abs(rah - rahmost) > tol:
+        while n < nmax and np.max(np.abs(rah - rahmost)) > tol:
             rah = rahmost
             L = rah * (uf ** 3) * (Toh + Tk) / (g * vonk * dT)
 
-            if L > 0:  #Stable conditions
+            #Stable conditions
+            PsiH[L>0] = -5 * (self.io.zu - self.d) / L
+            PsiM[L>0] = -5 * (self.io.zu - self.d) / L
 
-                PsiH = -5 * (zu - d) / L
-                PsiM = -5 * (zu - d) / L
+            #Unstable conditions
+            X = (1 - 16 * (zu - d) / L) ** 0.25
+            PsiH[L<=0] = 2 * np.log((1 + (X ** 2)) / 2)
+            PsiM[L<=0] = 2 * np.log((1 + X) / 2) + np.log((1 + (X ** 2)) / 2) - 2 * np.atan(X) + pi / 2
 
-            else:    #Unstable conditions
-
-                X = (1 - 16 * (zu - d) / L) ** 0.25
-                PsiH = 2 * np.log((1 + (X ** 2)) / 2)
-                PsiM = 2 * np.log((1 + X) / 2) + np.log((1 + (X ** 2)) / 2) - 2 * np.atan(X) + pi / 2
-
-            uf = vonk * u / ((np.log((zu - d) / zom)) - PsiM)
-            rahmost = ((np.log((zu - d) / (zoh))) - PsiH) / (vonk * uf)
+            uf = vonk * self.io.u / ((np.log((self.io.zu - self.d) / self.zom)) - PsiM)
+            rahmost = ((np.log((self.io.zu - self.d) / (self.zoh))) - PsiH) / (vonk * uf)
             n = n + 1
 
         if n == nmax:
-            uf = vonk * u / ((np.log((zu - d) / zom)))
-            rahmost = ((np.log((zu - d) / (zoh)))) / (vonk * uf)
+            uf = vonk * self.io.u / ((np.log((self.io.zu - self.d) / self.zom)))
+            rahmost = ((np.log((self.io.zu - self.d) / (self.zoh)))) / (vonk * uf)
+        self.rah = rahmost
 
-    def rx(self): 
+    def rx_calc(self): 
         #def rx to compute resistance of heat transport between canopy and canopy
         #displacement height; taken from Norman et al. (1995) Appendix A
 
@@ -158,19 +159,17 @@ class resistances:
         #Uc     #Wind speed at top of canopy (m s-1)
         #A      #Empirical factor
         #Udz    #Wind speed at momentum height d + zom (m s-1)
-        #PsiM   #Stability correction for momentum at top of canopy,
-        #                    assumed negligible due to roughness effects in the sublayer
 
-        PsiM = 0
+        PsiM = np.zeros(self.io.T_rad.shape)
 
-        uc = u * (np.log((hc - d) / zom)) / ((np.log((zu - d) / zom)) - PsiM)
-        A = 0.28 * (LAIL ** (2 / 3)) * (hc ** (1 / 3)) * (s ** (-1 / 3))
-        udz = uc * np.exp(-A * (1 - ((d + zom) / hc)))
+        uc = self.io.u * (np.log((self.io.hc - self.d) / self.zom)) / ((np.log((self.io.zu - self.d) / self.zom)) - PsiM)
+        A = 0.28 * (self.io.LAIL ** (2 / 3)) * (self.io.hc ** (1 / 3)) * (self.io.s ** (-1 / 3))
+        udz = uc * np.exp(-A * (1 - ((self.d + self.zom) / self.io.hc)))
         if udz < 0.1: udz = 0.1
-        rx = (Cx / LAIL) * ((s / udz) ** 0.5)
-        return rsh
+        self.rx = (self.io.Cx / self.io.LAIL) * ((self.io.s / udz) ** 0.5)
+        
 
-    def rsh(self): 
+    def rsh_calc(self): 
         #def rsh to compute resistance of heat transport between soil and canopy displacement height
         #Taken from Norman et al. (1995) Appendix B AND Kustas and Norman (1999)
 
@@ -181,18 +180,17 @@ class resistances:
         #PsiM   #Stability correction for momentum at top of canopy,
         #                    assumed negligible due to roughness effects in the sublayer
 
-        PsiM = 0
-        uc = u * (np.log((hc - d) / zom)) / ((np.log((zu - d) / zom)) - PsiM)
-        A = 0.28 * (LAIL ** (2 / 3)) * (hc ** (1 / 3)) * (s ** (-1 / 3))
-        us = uc * np.exp(-A * (1 - (0.05 / hc)))
-        rsh = 1 / (c * ((np.abs(Ts - Tc)) ** (1 / 3)) + b * us)
-
-        return rsh
+        PsiM = np.zeros(self.io.T_rad.shape)
+        
+        uc = self.io.u * (np.log((self.io.hc - self.d) / self.zom)) / ((np.log((self.io.zu - self.d) / self.zom)) - PsiM)
+        A = 0.28 * (self.io.LAIL ** (2 / 3)) * (self.io.hc ** (1 / 3)) * (self.io.s ** (-1 / 3))
+        us = uc * np.exp(-A * (1 - (0.05 / self.io.hc)))
+        self.rsh = 1 / (self.io.c * ((np.abs(self.io.T_s - self.io.T_c)) ** (1 / 3)) + self.io.b * us)
 
     def rrh_stand(self):
         #standing residue thermal resistance per Aiken 2003
-        return rrsh
+        return None
     
     def rrh_flat(self):
         #flat residue thermal resistance per Lagos 2009
-        return rrfh
+        return None
