@@ -145,8 +145,12 @@ class radiation:
         # bands, Kbvis and Kbnir, respectively, daytime only
         # Colaizzi et al., 2012, Agron J, 104(2): 225-240, eq. (A1) and (A2)
         Kbday = (self.io.Rs > 0) and (self.Rso > 0)
-        self.KbVis = Kbday * max(0,min(((self.Kb / (self.Kb + self.Kd)) * self.io.KbVisConst * (self.io.Rs / Rso) ** self.io.KbVisExp),1))
-        self.KbNir = Kbday * max(0,min(((self.Kb / (self.Kb + self.Kd)) * self.io.KbNirConst * (self.io.Rs / Rso) ** self.io.KbNirExp),1))
+        minval = np.zeros(Kbday.shape)
+        self.KbVis = np.zeros(self.io.Rs.shape)
+        self.KbNir = np.zeros(self.io.Rs.shape)
+        maxval = np.ones(Kbday.shape)
+        self.KbVis[Kbday] = np.maximum(minval,np.minimum(((self.Kb[Kbday] / (self.Kb[Kbday] + self.Kd[Kbday])) * self.io.KbVisConst * (self.io.Rs[Kbday] / Rso[Kbday]) ** self.io.KbVisExp),maxval))
+        self.KbNir[Kbday] = np.maximum(minval,np.minimum(((self.Kb[Kbday] / (self.Kb[Kbday] + self.Kd[Kbday])) * self.io.KbNirConst * (self.io.Rs[Kbday] / Rso[Kbday]) ** self.io.KbNirExp),maxval))
                               
 
                               
