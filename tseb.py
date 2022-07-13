@@ -19,8 +19,8 @@ p = os.path.join(home,'CookIRCamET','Working')
 data = inputs()
 resistance = aero.resistances(data)
 radiation = solar.radiation(data)
-canopy = canopy.resistances(data)
-fluxes = fluxes.resistances(data)
+partition = canopy.radiation(data)
+flux = fluxes.rad_fluxes(data)
 
 #calculate roughness params
 resistance.roughness_lengths()
@@ -35,17 +35,32 @@ radiation.solar_angles()
 radiation.solar_angles()
 radiation.solar_angles()
 
-#calculate/partition downwelling shortwave Sd
-fvis_diff, fvis_diff, fvis_diff, fvis_diff =
+#calculate canopy transmissivity/reflectivity/soil albedo
+partition.fdhc()
+partition.
+partition.
+partition.
+partition.
+partition.
 
-#calculate downwelling longwave Ld if unavailable
-Ld = fluxes.()
+#Calculate radiation partitioning
+fluxes.Rnlw()
+fluxes.Rnsw()
 
-#calculate net radiation fluxes hitting each component
+#calculate aerodynamic resistances
+resistance.roughness_lengths
+resistance.rs
+resistance.rx
+resistance.rah
 
-
-#calculate aerodynamic resistances 
 #calculate ground heat flux, sensible heat flux, latent heat flux
+G = fluxes.G(Rns)
+Hs
+Hc
+LEs
+LEc
+E
+T
 
 #write results to file
 if  modeltype=='2SEB':
