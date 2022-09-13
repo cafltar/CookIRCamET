@@ -66,7 +66,7 @@ def bgrpcapture():
 def irpcapture():
       while True:
             r = ircapture()
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             current_time = now.strftime("%Y%m%d%H%M%S")
             fname = current_time+'_'+current_spot+'_ir.png'
             logging.info(os.path.join(p,fname))
@@ -90,7 +90,7 @@ if __name__ == '__main__':
       if len(sys.argv)>1:
             waittime = int(sys.argv[1])
       else:
-            waittime = 300
+            waittime = 3600
 
       app.config['waittime'] = waittime
       q1=Process(target=bgrpcapture)

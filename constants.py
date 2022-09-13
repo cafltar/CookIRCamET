@@ -13,7 +13,7 @@ boltz = constants.Stefan_Boltzmann# W/K4/m2
 vonk = 0.4 #Von Karman
 Tk = 273.16 #0 C
 rho_a = 1.205 #kg/m3
-Gsc = 1367 #W/m2
+gsc = 1367 #W/m2
 lam = 2450 #kJ/kg
 # heat capacity of dry air at constant pressure (J kg-1 K-1)
 c_pd = 1003.5
@@ -25,7 +25,25 @@ c_p = 1013
 # ratio of the molecular weight of water vapor to dry air
 epsilon = 0.622
 # gas constant for dry air, J/(kg*degK)
-R_d = 287.04
+r_d = 287.04
+
+def sind(theta):
+    return np.sin(np.deg2rad(theta))
+
+def cosd(theta):
+    return np.cos(np.deg2rad(theta))
+
+def tand(theta):
+    return np.tan(np.deg2rad(theta))
+    
+def asind(r):
+    return np.rad2deg(np.asin(r))
+
+def acosd(r):
+    return np.rad2deg(np.acos(r))
+
+def atand(r):
+    return np.rad2deg(np.atan(r))
 
 class inputs:
     def __init__(self):
@@ -40,7 +58,7 @@ class inputs:
                 parameters = read_csv(os.path.join(p,f))
                 #defaults
                 #user adjustable parameters
-                self.Cx = 90#Empirical constant  s m-1
+                self.cx = 90#Empirical constant  s m-1
                 self.b = 0.012#Empirical constant = 0.012 or b = 0.012[1 + cos(psiw)],
                 #       where psiw is wind direction, ccw from north
                 self.c = 0.0025#Empirical constant = 0.0025        
@@ -59,57 +77,69 @@ class inputs:
                 #surface temperature relationship for eight semiarid
                 #areas. J. Appl. Meteor., 33, 1110–1117.
                 #soil heat flux
-                self.GRnDay = -0.1
-                self.GRnNight = -0.5
+                self.grn_day = -0.1
+                self.grn_night = -0.5
                 self.aG = -0.31
                 #canopy stomatal resistance s/m
-                self.rcDay = 50
-                self.rcNight = 200
+                self.rc_day = 50
+                self.rc_night = 200
                 #soil albedo vis/nir/wet/dry
-                self.rhosNir = 0.15
-                self.rhosNis = 0.25
+                self.rhos_dry_nir = 0.15
+                self.rhos_dry_vis = 0.25
+                self.rhos_wet_nir = 0.15
+                self.rhos_wet_vis = 0.25
                 #soil emissivity
-                self.emisSoil = 0.98
+                self.emis_soil = 0.98
                 #residue albedo
-                self.rhorNir = 0.15 
-                self.rhorVis = 0.25
+                self.rhor_dry_nir = 0.15 
+                self.rhor_dry_vis = 0.25
+                self.rhor_wet_nir = 0.15 
+                self.rhor_wet_vis = 0.25
                 #residue emissivity
-                self.emisRes = 0.98
+                self.emis_res = 0.98
                 #leaf absorbance/emittance/reflectance
-                self.emisVeg = 0.98
-                self.zetaVis = 0.85#Leaf shortwave absorption in the visible (PAR) spectra (no units)
-                self.zetaNir = 0.2#Leaf shortwave absorption in the near infrared spectra (no units)
+                self.emis_veg = 0.98
+                self.zeta_vis = 0.85#Leaf shortwave absorption in the visible (PAR) spectra (no units)
+                self.zeta_nir = 0.2#Leaf shortwave absorption in the near infrared spectra (no units)
                 #leaf angle param
-                self.XE = 1.0
+                self.xe = 1.0
                 #canopy lw extinction
-                self.kappaIR = 0.95
+                self.kappa_ir = 0.95
                 #solar params
-                self.PISI = 0.457#Fraction of visible shortwave irriadiance in global irradiance;
+                self.pisi = 0.457#Fraction of visible shortwave irriadiance in global irradiance;
                 #~0.457 at Bushland, which agrees with Meek et al. (1984) for other Western US locations
-                self.KbVisConst = 1.034#Constant used in empirical equation to calculate the fraction
+                self.kb_vis_const = 1.034#Constant used in empirical equation to calculate the fraction
                 # of direct beam irradiance in the visible (PAR) band (no units)
-                self.KbVisExp = 2.234#Exponent used in empirical equation to calculate the fraction
+                self.kb_vis_exp = 2.234#Exponent used in empirical equation to calculate the fraction
                 # of direct beam irradiance in the visible (PAR) band (no units)
-                self.KbNirConst = 1.086#Constant used in empirical equation to calculate the fraction
+                self.kb_nir_const = 1.086#Constant used in empirical equation to calculate the fraction
                 # of direct beam irradiance in the near-infrared (NIR) band (no units)
-                self.KbNirExp = 2.384#Exponent used in empirical equation to calculate the fraction
+                self.kb_nir_exp = 2.384#Exponent used in empirical equation to calculate the fraction
                 #of direct beam irradiance in the near-infrared (NIR) band (no units)
+                self.kt = 1#turbidity coefficient only modify for severe turbidity 
                 #don't consider residue a separate class
-                self.Kt = 
-                self.modeltype = '2SEB'
+                self.model_type = '2SEB'
                 #do consider residue a separate class
                 #modeltype = '3SEB'
                 self.lat = np.nan#(dec deg)
                 self.lon = np.nan#(dec deg)
+                self.radiometer_zenith = np.nan#(dec deg)
+                self.radiometer_azimuth = np.nan#(dec deg)
                 self.ele = np.nan#elevation (m)
                 #Measurement heights (speed and temp)
                 self.zu = 2
                 self.zt = 2
-                self.rowc = .6#row width (m)
-                self.rowdir = # degrees from N, clockwise
+                self.row_width = .6#row width (m)
+                self.row_dir = # degrees from N, clockwise
                 self.lz = -120#longitude of tz center
                 self.tstep =
-                self.tol = #tolerance for rah calc 
+                self.tol = #tolerance for rah calc
+                #evap coefficients for soil wetness/albedo
+                self.ke_max
+                self.kc_max
+                #fraction wetted from irrigation % Typcially assume = 1.0 for sprinkler, 0.5 for LEPA; 0.1 for SDI
+                self.fwet
+                
     def read_met(self):
         for f in os.listdir(p):
             if 'timeseries' in f and f[-4:]=='.csv':
@@ -123,7 +153,7 @@ class inputs:
                 #compute ea, esa
                 self.ea = aero.ea(self.P , self.Ta , self.RH)
                 self.esa = aero.esa(self.Ta)
-                self.RsOpt
+                self.Rs_opt
                 self.Rs
                 self.latent = aero.latent(self.Ta)
                 self.rho_a = aero.rho_a(self.Ta,self.ea,self.P)
@@ -134,6 +164,7 @@ class inputs:
                 self.LAIL = self.LAIL*self.rowc/self.wc
                 self.precip =
                 self.irrig =
+                
     def read_can(self):
         for f in os.listdir(p):
             if 'cvfractions' in f and f[-4:]=='.csv':
@@ -151,7 +182,10 @@ class inputs:
                 self.T_res_sun = 
                 self.T_res_shade = 
                 self.T_rad = self.f_veg_sun*self.T_veg_sun+self.f_veg_shade*self.T_veg_shade+self.f_soil_sun*self.T_soil_sun+self.f_soil_shade*self.T_soil_shadeself.f_res_sun*self.T_res_sun+self.f_res_shade*self.T_res_shade
- 
                 self.T_s = (self.f_soil_sun*self.T_soil_sun+self.f_soil_shade*self.T_soil_shade+self.f_res_sun*self.T_res_sun+self.f_res_shade*self.T_res_shade)/(self.f_soil_sun+self.f_soil_shade+self.f_res_sun+self.f_res_shade)
  
                 self.T_c = (self.f_veg_sun*self.T_veg_sun+self.f_veg_shade*self.T_veg_shade)/(self.f_veg_sun+self.f_veg_shade)
+                                
+    def soil_albedo(RWC):                                                   
+        self.soil_alb_vis =#Soil albedo in visible band, DAILY time steps (no units)                                               
+        self.soil_alb_nir = #Soil albedo in visible band, DAILY time steps (no units)

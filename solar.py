@@ -50,14 +50,14 @@ class radiation:
         self.d = 0.4093 * np.sin(2 * pi * self.io.doy / 365 - 1.39) #(rad), FAO 56, p.46, eq.24
 
         self.Hs = np.acos(-(np.tan(self.latr)) .* (np.tan(self.d))) # (rad), ASCE 70 2nd ed., p. 67, eq. (4-14) sunset hour angle
-        self.solarzenith = np.min(90,180/pi*(np.acos(np.sin(self.latr) * np.sin(self.d) + np.cos(self.latr) * np.cos(self.d) * np.cos(self.H))))#FAO 56, p.226, eq.(3-15) but acos for zenith
+        self.solarzenith = np.min(90,acosd(np.sin(self.latr) * np.sin(self.d) + np.cos(self.latr) * np.cos(self.d) * np.cos(self.H))))#FAO 56, p.226, eq.(3-15) but acos for zenith
 
         # Calculate X and Y components of solar azimuth
         # http://www.usc.edu/dept/architecture/mbs/tools/vrsolar/Help/solar_concepts.html#Azimuth
         # (accessed 12/05/2007)
         Xazm = np.sin(self.H) * np.cos(self.d);
         Yazm = np.cos(self.latr) * np.sin(self.d) - np.sin(self.latr) * np.cos(self.H) * np.cos(self.d);
-        SATdec0 = 180/pi*np.atan(Xazm / Yazm);
+        SATdec0 = np.atand(Xazm / Yazm);
         #Specify solar azimuth as CWN
         SATdec1 = (Tdec < Tsn and SATdec0 < 0)*(-SATdec0);
         SATdec2 = (Tdec < Tsn and SATdec0 > 0)*(180-SATdec0);
@@ -136,7 +136,7 @@ class radiation:
         Kbx = (Kb > 0.15)
         self.Kd = Kbx * (0.35 - 0.36 * Kb) + (1 - Kbx) * (0.18 + 0.82 * Kb)
         #  ASCE 70 2nd ed., p. 65, eq. (4-8)
-        self.Rso[self.io.RsoOpt==3] = Ra[self.io.RsoOpt==3] * (Kb + Kd) # (MJ/m2/t1),
+        self.Rso[self.io.RsoOpt==3] = Ra[self.io.RsoOpt==3] * (self.Kb + self.Kd) # (MJ/m2/t1),
         #  ASCE 70 2nd ed., p. 64, eq. (4-5)
     
     def Kbeam(self):
