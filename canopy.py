@@ -139,29 +139,58 @@ class canopy:
         
         rhodirv = 2 * Kbs * rhohorv / (Kbs + 1)
         rhodirn = 2 * Kbs * rhohorn / (Kbs + 1)
+        #def rhocsdiff to compute reflectance of DIRECT radiation through the canopy - C&N 98
+        self.rhocsdir_vis =
+        self.rhocsdir_nir =
 
         # Calculate direct beam canopy transmittance for visible and near infrared
         # spectra (CN98, eq. 15.11, p. 257)
-        taudirVIS = (((rhodirv ** 2) - 1) * np.exp(-(self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)) / (((rhodirv * SoilAlbvis) - 1) + rhodirv * (rhodirv - SoilAlbvis) * np.exp(-2 * (self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs))
-        taudirNIR = (((rhodirn ** 2) - 1) * np.exp(-(self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)) / (((rhodirn * SoilAlbnir) - 1) + rhodirn * (rhodirn - SoilAlbnir) * np.exp(-2 * (self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs))
+        taudirv = (((rhodirv ** 2) - 1) * np.exp(-(self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)) / (((rhodirv * self.io.alb_vis) - 1) + rhodirv * (rhodirv - self.io.alb_vis) * np.exp(-2 * (self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs))
+        taudivn = (((rhodirn ** 2) - 1) * np.exp(-(self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)) / (((rhodirn * self.io.alb_nir) - 1) + rhodirn * (rhodirn - self.io.alb_nir) * np.exp(-2 * (self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs))
 
         # Calculate direct beam canopy reflectance for visible and near infrared
         # spectra (CN98, eq. 15.9, p. 257)
-        xidirv = ((rhodirv - SoilAlbvis) / (rhodirv * SoilAlbvis - 1)) * exp(-2 * (self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)
-        xidirn = ((rhodirn - SoilAlbnir) / (rhodirn * SoilAlbnir - 1)) * exp(-2 * (self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)
-        rhocsdirVIS = (rhodirv + xidirv) / (1 + xidirv * rhodirv)
-        rhocsdirNIR = (rhodirn + xidirn) / (1 + xidirn * rhodirn)
+        xidirv = ((rhodirv - self.io.alb_vis)/ (rhodirv * self.io.alb_vis - 1)) * np.exp(-2 * (self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)
+        xidirn = ((rhodirn - self.io.alb_nir) / (rhodirn * self.io.alb_nir - 1)) * exp(-2 * (self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)
+        rhocsdirv = (rhodirv + xidirv) / (1 + xidirv * rhodirv)
+        rhocsdirn = (rhodirn + xidirn) / (1 + xidirn * rhodirn)
 
+
+
+        # Calculate direct beam canopy + soil reflectance for visible and near infrared
+        # spectra for each solar zenith and azimuth element (CN98, eq. 15.9, p. 257)
+        xidirvi = ((rhodirvi - SoilAlbvis) / (rhodirvi * SoilAlbvis - 1)) * ...
+            exp(-2 * (Leafabsv ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)
+        xidirni = ((rhodirni - SoilAlbnir) / (rhodirni * SoilAlbnir - 1)) * ...
+            exp(-2 * (Leafabsn ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)
+        rhocsdirvi = (rhodirvi + xidirvi) / (1 + xidirvi * rhodirvi)
+        rhocsdirni = (rhodirni + xidirni) / (1 + xidirni * rhodirni)
+
+        # Calculate diffuse canopy reflectance for visible and near infrared
+        # spectra by integrating rhocsdirvi and rhocsdirni, repsectively
+        rhocsdirvi1 = 4 * (5 / 85) * (5 / 85) * ...
+            ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * rhocsdirvi
+        rhocsdirni1 = 4 * (5 / 85) * (5 / 85) * ...
+                                                            ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * rhocsdirni
+        rhocsdiffVIS = sum(rhocsdirvi1, [2, 3])
+        rhocsdiffNIR = sum(rhocsdirni1, [2, 3])
+        
+        #def taudir to compute transmittance of DIRECT beam radiation through the canopy - C&N 98
+        self.taudir_vis =
+        self.taudir_nir =
+    def taudiff(self): 
+        #def taudiff to compute transmittance of DIFFUSE radiation through the canopy
+        #by integrating taudir over all solar zenith and azimuth angles
         # ***********************************************************************
 
         # DIFFUSE TRANSMITTANCE AND REFLECTANCE
 
         # Calculate multiple row factor for a solar beam through the canopy
         # for each solar zenith and azimuth element (Colaizzi et al. 2012)
-        thetasi = ones(size(hc)) * (5:5:85) # Solar zenith array (2D)
-        psisi = (5:5:85) # Solar azimuth vector
+        thetasi = np.ones(len(hc)) * np.arange(5,85,5) # Solar zenith array (2D)
+        psisi = np.arange(5,85,5) # Solar azimuth vector
         # Solar azimuth array (3D)
-        psisi3 = ones(size(thetasi)) * reshape(psisi, 1, 1,[])
+        psisi3 = np.ones(thetasi.shape) * reshape(psisi, 1, 1,[])
         # Projected solar zenith array (3D)
         tanthetaspi = ((tand(thetasi)) * sind(psisi3))
         # Multiple row factor for solar beam (3D)
@@ -178,68 +207,43 @@ class canopy:
         # element (CN98, 15.4, p. 251) (2D, independent of solar azimuth)
         Kbsi = kb(thetasi)
         # Calculate direct beam canopy reflectance for visible and near infrared
-                            # spectra for each solar zenith element (CN98, eq. 15.7, p. 255
-                                                                     # CN98 eq. 15.8, p. 257) (2D, independent of solar azimuth)
-                            rhodirvi = 2 * Kbsi * rhohorv / (Kbsi + 1)
-                            rhodirni = 2 * Kbsi * rhohorn / (Kbsi + 1)
+        # spectra for each solar zenith element (CN98, eq. 15.7, p. 255
+        # CN98 eq. 15.8, p. 257) (2D, independent of solar azimuth)
+        rhodirvi = 2 * Kbsi * rhohorv / (Kbsi + 1)
+        rhodirni = 2 * Kbsi * rhohorn / (Kbsi + 1)
 
-                            # Calculate direct beam canopy transmittance for visible and near infrared
-                            # spectra for each solar zenith and azimuth element (CN98, eq. 15.11, p. 257)
-                            taudirvi = (((rhodirvi ** 2) - 1) * ...
-                                            exp(-(Leafabsv ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)) / ...
-                                (((rhodirvi * SoilAlbvis) - 1) + rhodirvi * (rhodirvi - SoilAlbvis) * ...
-                                     exp(-2 * (Leafabsv ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi))
-                                taudirni = (((rhodirni ** 2) - 1) * ...
-                                                exp(-(Leafabsn ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)) / ...
-                                    (((rhodirni * SoilAlbnir) - 1) + rhodirni * (rhodirni - SoilAlbnir) * ...
-                                         exp(-2 * (Leafabsn ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi))
+        # Calculate direct beam canopy transmittance for visible and near infrared
+        # spectra for each solar zenith and azimuth element (CN98, eq. 15.11, p. 257)
+        taudirvi = (((rhodirvi ** 2) - 1) * ...
+                        exp(-(Leafabsv ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)) / ...
+            (((rhodirvi * SoilAlbvis) - 1) + rhodirvi * (rhodirvi - SoilAlbvis) * ...
+                 exp(-2 * (Leafabsv ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi))
+        taudirni = (((rhodirni ** 2) - 1) * ...
+                            exp(-(Leafabsn ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)) / ...
+                (((rhodirni * SoilAlbnir) - 1) + rhodirni * (rhodirni - SoilAlbnir) * ...
+                     exp(-2 * (Leafabsn ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi))
 
-                                    # Calculate diffuse canopy transmittance for visible and near infrared
-                                    # spectra by integrating taudirvi and taudirni, repsectively
-                                    taudirvi1 = 4 * (1 / 90) * (1 / 90) * ...
+        # Calculate diffuse canopy transmittance for visible and near infrared
+        # spectra by integrating taudirvi and taudirni, repsectively
+        taudirvi1 = 4 * (1 / 90) * (1 / 90) * ...
                                         ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * taudirvi
-                                        taudirni1 = 4 * (1 / 90) * (1 / 90) * ...
+        taudirni1 = 4 * (1 / 90) * (1 / 90) * ...
                                             ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * taudirni
-                                            taudiffVIS = sum(taudirvi1, [2, 3])
-                                            taudiffNIR = sum(taudirni1, [2, 3])
+        taudiffVIS = sum(taudirvi1, [2, 3])
+        taudiffNIR = sum(taudirni1, [2, 3])
 
-                                            # Calculate direct beam canopy + soil reflectance for visible and near infrared
-                                            # spectra for each solar zenith and azimuth element (CN98, eq. 15.9, p. 257)
-                                            xidirvi = ((rhodirvi - SoilAlbvis) / (rhodirvi * SoilAlbvis - 1)) * ...
-                                                exp(-2 * (Leafabsv ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)
-                                                xidirni = ((rhodirni - SoilAlbnir) / (rhodirni * SoilAlbnir - 1)) * ...
-                                                    exp(-2 * (Leafabsn ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)
-                                                    rhocsdirvi = (rhodirvi + xidirvi) / (1 + xidirvi * rhodirvi)
-                                                    rhocsdirni = (rhodirni + xidirni) / (1 + xidirni * rhodirni)
-
-                                                    # Calculate diffuse canopy reflectance for visible and near infrared
-                                                    # spectra by integrating rhocsdirvi and rhocsdirni, repsectively
-                                                    rhocsdirvi1 = 4 * (5 / 85) * (5 / 85) * ...
-                                                        ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * rhocsdirvi
-                                                        rhocsdirni1 = 4 * (5 / 85) * (5 / 85) * ...
-                                                            ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * rhocsdirni
-                                                            rhocsdiffVIS = sum(rhocsdirvi1, [2, 3])
-                                                            rhocsdiffNIR = sum(rhocsdirni1, [2, 3])
-        
-        #def taudir to compute transmittance of DIRECT beam radiation through the canopy - C&N 98
-        self.taudir_vis =
-        self.taudir_nir =
-    def taudiff(self): 
-        #def taudiff to compute transmittance of DIFFUSE radiation through the canopy
-        #by integrating taudir over all solar zenith and azimuth angles
         self.taudiff_vis =
         self.taudiff_nir =
+
+
     def rhocsdir(self): 
-        #def rhocsdiff to compute reflectance of DIRECT radiation through the canopy - C&N 98
-        self.rhocsdir_vis =
-        self.rhocsdir_nir =
     def rhocsdiff(self):
         #def rhocsdiff to compute reflectance of DIFFUSE radiation through the canopy
         #by integrating all solar zenith and azimuth angles
         self.rhocsdiff_vis =
         self.rhocsdiff_nir =
 
-        function [quartic1, quartic2] = quartic(A, B, C, D, E)
+    def quartic(self,A, B, C, D, E)
         # Function quartic to calculate the first root (quartic1) and
         # second root (quartic2) of a quartic equation of form:
         # Ax^4 + Bx^3 + Cx^2 + Dx + E = 0.
@@ -292,7 +296,3 @@ class canopy:
 
                                                 # y subtracted in first terms of quartic1 and quartic2 to smooth curves
                                                 # If abs(Xc) < 0.001, then B = C =~ 0 and quad = 1, and assume quadratic equation.
-
-                                                clearvars alpha beta gamma P Q r u Uy y W ZZo ZZ
-
-                                                end

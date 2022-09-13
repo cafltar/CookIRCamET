@@ -188,4 +188,9 @@ class inputs:
                                 
     def soil_albedo(RWC):                                                   
         self.soil_alb_vis =#Soil albedo in visible band, DAILY time steps (no units)                                               
-        self.soil_alb_nir = #Soil albedo in visible band, DAILY time steps (no units)
+        self.soil_alb_nir = #Soil albedo in nir band, DAILY time steps (no units)
+        self.res_alb_vis =#Soil albedo in visible band, DAILY time steps (no units)                                               
+        self.res_alb_nir = #Soil albedo in nir band, DAILY time steps (no units)
+        self.alb_vis = ((self.f_soil_sun+self.f_soil_shade)*self.soil_alb_vis+(self.f_res_sun+self.f_res_shade)*self.res_alb_vis)/((self.f_soil_sun+self.f_soil_shade)+(self.f_res_sun+self.f_res_shade))
+        
+        self.alb_nir = ((self.f_soil_sun+self.f_soil_shade)*self.soil_alb_nir+(self.f_res_sun+self.f_res_shade)*self.res_alb_nir)/((self.f_soil_sun+self.f_soil_shade)+(self.f_res_sun+self.f_res_shade)) 
