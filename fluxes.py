@@ -47,8 +47,10 @@ def Hr(Tac,Tr,rr,fs):
     return aero.rho_a(Tac)*(Tr-Tac)/rr*c_p
 
 class rad_fluxes:
-    def __init__(self,inputs_obj,thetas,psis,taudiff_vis,taudiff_nir,taudir_vis,taudir_nir):
+    def __init__(self,inputs_obj,solar_obj,canopy_obj):
         self.io = inputs_obj
+        self.sol = solar_obj
+        self.can = canopy_obj
         
     def Lsky(self): 
         #def Lsky to calculate hemispherical downwelling longwave irradiance from the sky (W m-2).

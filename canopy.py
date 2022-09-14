@@ -16,7 +16,7 @@ class canopy:
         self.sol = solar_obj
         self.thetas = self.sol.solarzenith#from running solar class methods solarzenith - deg
         self.psis = self.sol.solarazimuth #deg
-        self.thetar = self.io.radiometer_zenith#from running solar class methods
+        self.thetar = self.io.radiometer_zenith#from input parameters
         self.psir = self.io.radiometer_azimuth
         
     def kb(self,theta):
@@ -24,108 +24,77 @@ class canopy:
         #using procedure of Campbell and Norman (1998), Chapter 15 (CN98)
         return (np.sqrt(self.io.XE ** 2 + (np.tan(theta)) ** 2)) / (self.io.XE + 1.774 * (self.io.XE + 1.182) ** -0.733)
 
-    def fcsolar_calc(self):
-        #fcsolar = Planar solar view factor of crop row vegetation,
-        solarzenith = min(89,self.thetas) # Constrain solarzenith < 89 deg
-        fcs1 = solarzenith < 89 # fcs = 0 unless sun above horizon
+    def fsis_calc(self):
+        #fsis - interrow shaded fraction (Colaizzi 2016)
+        self.fsis = (self.io.f_soil_shade + self.io.f_res_shade)/(self.io.f_soil_shade + self.io.f_res_shade + self.io.f_soil_sun + self.io.f_res_sun)
 
-        # Constrain 0 =< Rowdir < +180
-        rowdirc = acosd(cosd(io.row_dir))
-        # Calculate azimuthsunrow, the solar azimuth relative to a crop row,
-        # constrain 0 < azimuthsunrow < 90 deg
-        asr = abs(asind(sind(self.psis - rowdirc)))
-        # azimuthsunrow cannot equal 0 or +90 to avoid domain errors
-        azimuthsunrow = asr
-        azimuthsunrow[asr==0] = azimuthsunrow[asr==0]+1e-9
-        azimuthsunrow[asr==90] = azimuthsunrow[asr==90]+1e-9 
-
-        # Calculations
-        ac = hc / 2    # Vertical semiaxis of crop ellipse (m)
-        bc = wc / 2    # Horizontal semiaxis of crop ellipse (m)
-        # thetasp = Solar zenith angle projected perpendicular to crop row
-        thetasp = atand(tand(solarzenith) * sind(azimuthsunrow))
-
-        # Xscr = Horizontal distance from canopy ellipse origin to tangent of sunray
-        # along thetaspcr (m)
-        # Yscr = Vertical distance from canopy ellipse origin to tangent of sunray
-        # along thetaspcr (m)
-        # thetaspcr = Critical perpendicular solar zenith angle, where greater angles
-        # result in adjacent row shading (rad)
-
-        Xscr = 2 * ((bc) ** 2) / (self.io.row_width)   # Xscr is positive
-        Yscr = np.sqrt(((ac ** 2)*Xscr*(self.io.row_width - 2*Xscr)) /2/((bc)**2))
-        # Yscr is positive
-        thetaspcr = np.atan((self.io.row_width - 2*Xscr)/(2*Yscr)) # thetascr is positive
-
-        # Constrain fcs = 1 for low sun elevation
-        fcs2 = abs(thetasp) >= thetaspcr
-
-        # Xs = Horizontal distance from canopy ellipse origin to
-        # tangent of sunray along thetasp (m)
-        # Ys = Vertical distance from canopy ellipse origin to
-        # tangent of sunray along thetasp (m)
-
-        Xs = bc/sqrt(1+(ac**2)/((bc)**2)*((np.tan(thetasp))**2)) # Xs is positive
-        Ys = (ac**2)/((bc)**2)*Xs*np.tan(thetasp) # Ys is positive or negative
-
-        fcs3 = min(1,((2*Xs + 2*Ys*np.tan(thetasp))/self.io.row_width))
-        fcsolar = fcs1*max(fcs2,fcs3)
-
-        self.fcsolar = fcsolar
+    def fdhc_calc(self):
+        # fdhc = downward hemispherical view factor of canopy
+        #the downward hemispherical view factor of the canopy is that which is sunlit+shaded
+        self.fdhc = self.io.f_veg_shade + self.io.f_veg_shade
         
-    def mrf_calc(self):
+    def mrf_plf_calc(self):
+        % Calculate psird, the radiometer azimuth relative to a crop row,
+        % constrain 0 < psird < 90 deg, where 0 deg is parallel and 90 deg
+        % is perdendicular to the crop row
+        psird = abs(asind(sind(radazimuth - Rowdirc)));
+        % psird cannot equal 0 or 90 deg to avoid domain errors.
+        psirdc = psird + ((psird==0)|(psird==90)) .* eps;
+
+        % Convert from degrees to radians
+        psir = psirdc .* pi ./ 180;
+        thetar = thetard .* pi ./ 180;
+
+        % thetarp = Directional radiometer zenith angle projected perpendicular
+        % to crop row; thetarp can be positive or negative (rad)
+        thetarp = atan((tan(thetar)) .* sin(psir));
+
+        n = 20; % Limit maximum rows to 20
+        thetaspMR = thetasp .* ones(length(thetasp),n);
+        thetarpMR = thetarp .* ones(length(thetasp),n);
+        rowarray = ones(length(thetasp),n).*(1:1:n);
+
+        % XcrMR = Horizontal distance from canopy ellipse origin to tangent of
+        % sunray or directional radiometer view along thetaspcr or thetarpcr,
+        % respectively, for multiple rows (n). XscrMR is positive (m)
+        XcrMR = 2 .* ((bc) .^ 2) ./ (rowarray .* Rowsp);
+
+        % YcrMR = Vertical distance from canopy ellipse origin to tangent of
+        % sunray or directional radiometer view along thetaspcr or thetarpcr,
+        % respectively, for multiple rows (n). YcrMR is positive (m)
+        YcrMR = sqrt(((ac .^ 2).*XcrMR.*(rowarray .* Rowsp - 2.*XcrMR)) ./2./((bc).^2));
+
+        % thetapcrMR = Critical perpendicular solar zenith angle, where greater
+        % angles result in adjacent row shading for multiple rows,
+        % or critical perpendicular directional radiometer view angle, where greater
+        % angles result in ajacent rows obscuring view for multiple rows.
+        % thetapcrMR is positive (rad)
+        thetapcrMR = atan((rowarray .* Rowsp - 2.*XcrMR)./(2.*YcrMR));
+
+        testarrays = rowarray.*(thetaspMR > thetapcrMR);
+        testarrayr = rowarray.*(thetarpMR > thetapcrMR);
+
+        % Calculate MRFs (solar) and MRFr (directional radiometer)
+        % For solar, MultiRow >= 1 daylight only
+        MRFs = (solarzenith<89) .* max(1,(max(testarrays,[],2)));
+        MRFr = max(1, (max(testarrayr,[],2)));
+
+        % Calculate PLFs (solar) and PLFr (directional radiometer)
+        Ysp = ac .* bc ./ sqrt((ac .^ 2) .* ((tan(thetasp)) .^ 2) + (bc .^ 2));
+        Xsp = Ysp .* tan(thetasp);
+        Zsp = Xsp ./ abs(tan(azimuthsunrow));
+        PLFs = (solarzenith<89) .* (sqrt(Xsp .^ 2 + Ysp .^ 2 + Zsp .^ 2)) ./ ac;
+
+        Yrp = ac .* bc ./ sqrt((ac .^ 2) .* ((tan(thetarp)) .^ 2) + (bc .^ 2));
+        Xrp = Yrp .* tan(thetarp);
+        Zrp = Xrp ./ abs(tan(psir));
+        PLFr = (sqrt(Xrp .^ 2 + Yrp .^ 2 + Zrp .^ 2)) ./ ac;
+        
         self.mrf_s =
         self.mrf_r =
 
-    def plf_calc(self):
         self.plf_s =
         self.plf_r =
-
-    def fdhc_calc(self):
-        # OUTPUT
-        # fdhc = downward hemispherical view factor of canopy
-
-        # Create 3D arrays to integrate azimuth (0 to 90 deg) by number of
-        # interrows visible to radiometer
-
-        # Build azimuth element array from 0 to 90 degrees, step psiele
-        psiele = 5 # Differential azimuth element (deg)
-        psiarray = np.ones(size(ac)) * (psiele:psiele:(90-psiele))
-        # Calculate number of perpendicular interrows visible below the radiometer
-        NRh = ceil(Vh * (sqrt(1 - 4 * (bc ** 2) / (self.io.row_width ** 2))) / (2 * ac))
-        NRhmax = min(10,max(NRh)) # Limit array to 10 crop rows
-        # Make array with dimensions (:,:,NRhmax)
-        AA = np.arange(1,NRhmax)
-        BB = reshape(AA, 1, 1, [])
-        NRharray = (np.ones(length(psiarray),width(psiarray),NRhmax)) * BB - 1
-
-        # Calculate quartic coefficients to be used in quartic function:
-        #   (Ax^4 + Bx^3 + Cx^2 + Dx + E = 0)
-        X1 = (self.io.row_width * (NRharray) - Ph) ./ sind(psiarray)
-        Y1 = Vh - ac
-        bcr = bc / sind(psiarray)
-
-        A = (Y1 ** 2) * (ac ** 2) - (ac ** 4)
-        B = -2 * X1 * Y1 * (ac ** 2)
-        C = (Y1 ** 2) * (bcr ** 2) + (X1 ** 2) * (ac ** 2) - 2 * (bcr ** 2) * (ac ** 2)
-        D = -2 * X1 * Y1 * (bcr ** 2)
-        E = (X1 ** 2) * (bcr ** 2) - (bcr ** 4)
-
-        # Call quartic function. Can test roots by uncommenting code below.
-        [quartic1, quartic2] = quartic(A, B, C, D, E)
-
-        # Calculate arctan of quartic roots 1 and 2
-        # reduce arrays by 1 in third dimension and shift
-        thetah1 = atand(quartic1(:,:,2:NRhmax))
-        thetah2 = atand(quartic2(:,:,1:(NRhmax-1)))
-
-        # Calculate soil view factor.
-        fdhsoil = max(0, ((2/180)*(1/180) * (psiele) * (thetah1 - thetah2)))
-
-        # Factor of 2 is for symmetrical interrows viewed by hemispherical transect.
-        fdhc = 1 - 2*sum(fdhsoil, [2, 3])
-        #the downward hemispherical view factor of the canopy is that which is sunlit+shaded
-        self.fdhc =
 
     def taudir(self):
         # DIRECT BEAM TRANSMITTANCE AND REFLECTANCE
