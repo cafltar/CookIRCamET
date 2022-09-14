@@ -90,7 +90,7 @@ if __name__ == '__main__':
       if len(sys.argv)>1:
             waittime = int(sys.argv[1])
       else:
-            waittime = 3600
+            waittime = 1800
 
       app.config['waittime'] = waittime
       q1=Process(target=bgrpcapture)

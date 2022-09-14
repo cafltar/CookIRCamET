@@ -55,78 +55,54 @@ class rad_fluxes:
     def Lsky(self): 
         #def Lsky to calculate hemispherical downwelling longwave irradiance from the sky (W m-2).
         # emisatm    #Atmospheric emissivity
-
-        ea1 = aero.ea(P, Ta, RH)
-
-        emisatm = 0.7 + (0.000595) * ea1 * np.exp(1500 / (Ta + 273.16))
+        emisatm = 0.7 + (0.000595) * self.io.ea * np.exp(1500 / (self.io.Ta + Tk))
         #Idso et al (1981) WRR 17(2): 295-304, eq. 17 (hemispherical view factor, full longwave spectrum)
 
         #emisatm = 1.24 * ((10 * ea1 / (Ta + 273.1)) ** (1 / 7))
         #Brutsaert (1975) WRR 11: 742-744.
 
-        return emisatm * boltz * ((Ta + Tk) ** 4)   
+        return emisatm * boltz * ((self.io.Ta + Tk) ** 4)   
 
-    def Lns(P , Ta , RH , Ts , Tc , LAI , wc , row , fdhc, fres, fsoil): 
+    def Lns(self): 
         #def Lnsoil to compute the net longwave radiation to the SOIL using the
-        LAIL = LAI * row / wc
-        Lc = emisveg * boltz * ((Tc + Tk) ** 4)
-        Ls = emisSoil * boltz * ((Ts + Tk) ** 4)
-        lwexp = np.exp(-kappIr * LAIL)
+        self.Lc = self.io.emis_veg * boltz * (self.io.f_veg_sun*(self.io.T_veg_sun + Tk) ** 4+self.io.f_veg_shade*(self.io.T_veg_shade + Tk) ** 4)/self.io.f_veg
+        self.Ls = self.io.emis_soil * boltz * (self.io.f_soil_sun*(self.io.T_soil_sun + Tk) ** 4+self.io.f_soil_shade*(self.io.T_soil_shade + Tk) ** 4)/self.io.f_soil*self.f_soil_rel
+        self.Lr = self.io.emis_res * boltz * ((self.io.f_res_sun*(self.io.T_res_sun + Tk) ** 4+self.io.f_res_shade*(self.io.T_res_shade + Tk) ** 4)//self.io.f_res*(1-self.f_soil_rel)
+        
+        self.lwexp = np.exp(-self.io.kappa_ir * self.io.LAIL)
 
-        return emisSoil * Lsky(P , Ta , RH ) * (1 - fdhc + fdhc * lwexp) + emisSoil * Lc * fdhc * (1 - lwexp) - Ls
+        return (self.io.emis_soil * self.Lsky() * (1 - self.can.fdhc + self.can.fdhc * self.lwexp) + self.io.emis_soil * self.Lc * self.can.fdhc * (1 - self.lwexp))*self.f_soil_rel - self.Ls
 
-    def Lnc(P , Ta , RH , Ts , Tc , LAI , wc , row  , fdhc ) :
-        #def Lncanopy to compute the net longwave radiation to the CANOPY using the
-        LAIL = LAI * row / wc
-        Lc = emisveg * boltz * ((Tc + Tk) ** 4)
-        Ls = emisSoil * boltz * ((Ts + Tk) ** 4)
-        lwexp = np.exp(-kappIr * LAIL)
+    def Lnr(self): 
+        return (self.io.emis_res * self.Lsky() * (1 - self.can.fdhc + self.can.fdhc * self.lwexp) + self.io.emis_res * self.Lc * self.can.fdhc * (1 - self.lwexp))*(1-self.f_soil_rel) - self.Lr
+                                              
+    def Lnc(self) :
+        return (self.io.emis_veg * self.Lsky() + self.io.emis_veg * (self.Ls+self.Lr) - (1 + self.io.emis_soil) * self.Lc) * self.can.fdhc * (1 - self.lwexp)
 
-        return (emisveg * Lsky(P , Ta , RH ) + emisveg * Ls - (1 + emisSoil) * Lc) * fdhc * (1 - lwexp)
-
-
-    def Sns(Rs , KbVis , KbNir , fsc , fdhc , thetas , psis , hc , wc , row , Pr , Vr , LAI): 
-
+    def Sns(self): 
         #def Sns to calculate net shortwave radiation to the soil using
         #Campbell and Norman (1998) radiative transfer model and elliptical hedgerow geometric model
+        self.TVis = self.io.Rs * self.io.pisi * ((self.can.fsis * self.can.taudir_vis + 1 - self.can.fsc) * self.sol.KbVis + (self.can.fdhc * self.can.taudiff_vis + 1 - self.can.fdhc) * (1 - self.sol.KbVis))
+        self.TNir =  self.io.Rs * (1 - self.io.pisi) * ((self.can.fsis * self.can.taudir_nir + 1 - self.can.fsis) * self.sol.KbNir + (self.can.fdhc * self.can.taudiff_nir + 1 - self.can.fdhc) * (1 - self.sol.KbNir))
 
-        if Rs = 0: return 0
+        return (TVis * (1 - self.io.soil_alb_vis) + TNir * (1 - self.io.soil_alb_nir))*(Rs>0) * self.io.f_soil_rel
 
-        wc = min(0.99*row,wc)
+    def Snr(self): 
+        #def Snr to calculate net shortwave radiation to the res using
+        #Campbell and Norman (1998) radiative transfer model and elliptical hedgerow geometric model - modified to account for res/soil mix
+        self.TVis = self.io.Rs * self.io.pisi * ((self.can.fsis * self.can.taudir_vis + 1 - self.can.fsc) * self.sol.KbVis + (self.can.fdhc * self.can.taudiff_vis + 1 - self.can.fdhc) * (1 - self.sol.KbVis))
+        self.TNir =  self.io.Rs * (1 - self.io.pisi) * ((self.can.fsis * self.can.taudir_nir + 1 - self.can.fsis) * self.sol.KbNir + (self.can.fdhc * self.can.taudiff_nir + 1 - self.can.fdhc) * (1 - self.sol.KbNir))
 
-        taudirVis = canopy.taudir(thetas, psis, hc, wc, row, LAI)
-        taudiffVis = canopy.taudiff(hc, wc, row, LAI)
-        taudirNir = canopy.taudir(thetas, psis, hc, wc, row, LAI)
-        taudiffNir = canopy.taudiff(hc, wc, row, LAI)
+        return (TVis * (1 - self.io.res_alb_vis) + TNir * (1 - self.io.res_alb_nir))*(Rs>0) * (1-self.io.f_soil_rel)
 
-        TVis = Rs * PISI * ((fsc * taudirVis + 1 - fsc) * KbVis + (fdhc * taudiffVis + 1 - fdhc) * (1 - KbVis))
-
-        TNir = Rs * (1 - PISI) * ((fsc * taudirNir + 1 - fsc) * KbNir + (fdhc * taudiffNir + 1 - fdhc) * (1 - KbNir))
-
-        return TVis * (1 - rhosVis) + TNir * (1 - rhosNir)
-
-    def Snc(Rs , KbVis , KbNir , fsc , fdhc , thetas , psis , hc , wc , row , Pr , Vr , LAI): 
-
+    def Snc(self): 
         #def Snc to calculate net shortwave radiation to the canopy using
         #Campbell and Norman (1998) radiative transfer model and elliptical hedgerow geometric model
 
-        if Rs = 0: return  0
-        wc = min(wc,0.99 * row)
-
-        taudirVis = canopy.taudir(thetas, psis, hc, wc, row, LAI)
-        taudiffVis = canopy.taudiff(hc, wc, row, LAI)
-        taudirNir = canopy.taudir(thetas, psis, hc, wc, row, LAI)
-        taudiffNir = canopy.taudiff(hc, wc, row, LAI)
-
-        alphadirVis = canopy.rhocsdir(thetas, psis, hc, wc, row, LAI)
-        alphadiffVis = canopy.rhocsdiff(hc, wc, row, LAI)
-        alphadirNir = canopy.rhocsdir(thetas, psis, hc, wc, row, LAI)
-        alphadiffNir = canopy.rhocsdiff(hc, wc, row, LAI)
-
-        SncdirVis = Rs * PISI * KbVis * fsc * (1 - taudirVis) * (1 - alphadirVis)
-        SncdiffVis = Rs * PISI * (1 - KbVis) * fdhc * (1 - taudiffVis) * (1 - alphadiffVis)
-        SncdirNir = Rs * (1 - PISI) * KbNir * fsc * (1 - taudirNir) * (1 - alphadirNir)
-        SncdiffNir = Rs * (1 - PISI) * (1 - KbNir) * fdhc * (1 - taudiffNir) * (1 - alphadiffNir)
+        SncdirVis = self.io.Rs * self.io.pisi * self.sol.KbVis * self.can.fsis * (1 - self.can.taudir_vis) * (1 - self.can.rhocsdir_vis)
+        SncdiffVis = self.io.Rs * self.io.pisi * (1 - self.sol.KbVis) * self.can.fdhc * (1 - self.can.taudiff_vis) * (1 - self.can.rhocsdiff_vis)
+        SncdirNir = self.io.Rs * (1 - self.io.pisi) * self.sol.KbNir * self.can.fsis * (1 - self.can.taudir_nir) * (1 - self.can.rhocsdir_nir)
+        SncdiffNir =  self.io.Rs * (1 - self.io.pisi) * (1 - self.sol.KbNir) * self.can.fdhc * (1 - self.can.taudiff_nir) * (1 - self.can.rhocsdiff_nir)
 
         return SncdirVis + SncdiffVis + SncdirNir + SncdiffNir
 

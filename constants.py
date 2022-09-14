@@ -50,6 +50,7 @@ class inputs:
         self.read_params()
         self.read_can()
         self.read_met()
+        self.soil_albedo()
         return None
 
     def read_params(self):
@@ -153,8 +154,7 @@ class inputs:
                 #compute ea, esa
                 self.ea = aero.ea(self.P , self.Ta , self.RH)
                 self.esa = aero.esa(self.Ta)
-                self.Rs_opt
-                self.Rs
+                self.Rs = 
                 self.latent = aero.latent(self.Ta)
                 self.rho_a = aero.rho_a(self.Ta,self.ea,self.P)
                 self.LAI =
@@ -181,16 +181,14 @@ class inputs:
                 self.T_soil_shade = 
                 self.T_res_sun = 
                 self.T_res_shade = 
-                self.T_rad = self.f_veg_sun*self.T_veg_sun+self.f_veg_shade*self.T_veg_shade+self.f_soil_sun*self.T_soil_sun+self.f_soil_shade*self.T_soil_shadeself.f_res_sun*self.T_res_sun+self.f_res_shade*self.T_res_shade
-                self.T_s = (self.f_soil_sun*self.T_soil_sun+self.f_soil_shade*self.T_soil_shade+self.f_res_sun*self.T_res_sun+self.f_res_shade*self.T_res_shade)/(self.f_soil_sun+self.f_soil_shade+self.f_res_sun+self.f_res_shade)
- 
-                self.T_c = (self.f_veg_sun*self.T_veg_sun+self.f_veg_shade*self.T_veg_shade)/(self.f_veg_sun+self.f_veg_shade)
-                                
+                self.f_soil = self.f_soil_shade+self.f_soil_sun
+                self.f_res = self.f_res_shade+self.f_res_sun
+                self.f_veg = self.f_veg_shade+self.f_veg_sun
+                #relative soil fraction of ground
+                self.f_soil_rel = self.f_soil/(self.f_soil+self.f_res)
+                
     def soil_albedo(RWC):                                                   
         self.soil_alb_vis =#Soil albedo in visible band, DAILY time steps (no units)                                               
         self.soil_alb_nir = #Soil albedo in nir band, DAILY time steps (no units)
         self.res_alb_vis =#Soil albedo in visible band, DAILY time steps (no units)                                               
         self.res_alb_nir = #Soil albedo in nir band, DAILY time steps (no units)
-        self.alb_vis = ((self.f_soil_sun+self.f_soil_shade)*self.soil_alb_vis+(self.f_res_sun+self.f_res_shade)*self.res_alb_vis)/((self.f_soil_sun+self.f_soil_shade)+(self.f_res_sun+self.f_res_shade))
-        
-        self.alb_nir = ((self.f_soil_sun+self.f_soil_shade)*self.soil_alb_nir+(self.f_res_sun+self.f_res_shade)*self.res_alb_nir)/((self.f_soil_sun+self.f_soil_shade)+(self.f_res_sun+self.f_res_shade)) 

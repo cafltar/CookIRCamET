@@ -116,7 +116,7 @@ class radiation:
         self.Rso = np.zeros(Ra.shape)
 
         # RsoOpt = 1 (Simple)
-        self.Rso[self.io.RsoOpt==1] = Ra[self.io.RsoOpt==1] * (0.75 + (2e-5) * self.io.ele)
+        self.Rso[self.io.Rs_opt==1] = Ra[self.io.Rs_opt==1] * (0.75 + (2e-5) * self.io.ele)
         # (MJ/m2/t1),  ASCE 70 2nd ed., p. 63, eq. (4-3), (4-4)
 
         # RsoOpt = 2 (Beer's Law)
@@ -124,10 +124,10 @@ class radiation:
         sinphix = np.sin(self.latr) * np.sin(self.d) + np.cos(self.latr) * np.cos(self.d) * np.cos(self.H)   
         sinphi = max(0.1,sinphix)
         #  ASCE 70 2nd ed., p. 65, eq. (4-10), minimum  = 0.10
-        self.Rso[self.io.RsoOpt==2] = Ra[self.io.RsoOpt==2] * np.exp((-0.0018 * self.io.P) / (self.io.Kt * sinphi))    
+        self.Rso[self.io.Rs_opt==2] = Ra[self.io.Rs_opt==2] * np.exp((-0.0018 * self.io.P) / (self.io.Kt * sinphi))    
         # (MJ/m2/t1), FAO 56, p.226, eq.(3-14)
 
-        # RsoOpt = 3 (Atm moisture and turbidity)
+        # Rs_opt = 3 (Atm moisture and turbidity)
         # Calculate beam transmittance (Kb)
         W = 0.14 * self.io.ea * self.io.P + 2.1 #  ASCE 70 2nd ed., p. 64, eq. (4-7)
         self.Kb = 0.98 * np.exp(((-0.00146 * self.io.P) / (self.io.Kt * sinphi)) - 0.075 * ((W / sinphi) ** 0.4)) 
@@ -136,7 +136,7 @@ class radiation:
         Kbx = (Kb > 0.15)
         self.Kd = Kbx * (0.35 - 0.36 * Kb) + (1 - Kbx) * (0.18 + 0.82 * Kb)
         #  ASCE 70 2nd ed., p. 65, eq. (4-8)
-        self.Rso[self.io.RsoOpt==3] = Ra[self.io.RsoOpt==3] * (self.Kb + self.Kd) # (MJ/m2/t1),
+        self.Rso[self.io.Rs_opt==3] = Ra[self.io.Rs_opt==3] * (self.Kb + self.Kd) # (MJ/m2/t1),
         #  ASCE 70 2nd ed., p. 64, eq. (4-5)
     
     def Kbeam(self):
@@ -149,8 +149,8 @@ class radiation:
         self.KbVis = np.zeros(self.io.Rs.shape)
         self.KbNir = np.zeros(self.io.Rs.shape)
         maxval = np.ones(Kbday.shape)
-        self.KbVis[Kbday] = np.maximum(minval,np.minimum(((self.Kb[Kbday] / (self.Kb[Kbday] + self.Kd[Kbday])) * self.io.KbVisConst * (self.io.Rs[Kbday] / Rso[Kbday]) ** self.io.KbVisExp),maxval))
-        self.KbNir[Kbday] = np.maximum(minval,np.minimum(((self.Kb[Kbday] / (self.Kb[Kbday] + self.Kd[Kbday])) * self.io.KbNirConst * (self.io.Rs[Kbday] / Rso[Kbday]) ** self.io.KbNirExp),maxval))
+        self.KbVis[Kbday] = np.maximum(minval,np.minimum(((self.Kb[Kbday] / (self.Kb[Kbday] + self.Kd[Kbday])) * self.io.kb_vis_const * (self.io.Rs[Kbday] / Rso[Kbday]) ** self.io.kb_vis_exp),maxval))
+        self.KbNir[Kbday] = np.maximum(minval,np.minimum(((self.Kb[Kbday] / (self.Kb[Kbday] + self.Kd[Kbday])) * self.io.kb_nir_const * (self.io.Rs[Kbday] / Rso[Kbday]) ** self.io.kb_nir_exp),maxval))
                               
 
                               
