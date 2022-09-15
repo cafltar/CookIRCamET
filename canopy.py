@@ -33,6 +33,8 @@ class canopy:
         self.fdhc = self.io.f_veg_shade + self.io.f_veg_shade
         
     def mrf_plf_calc(self):
+        ac = self.io.hc / 2    # Vertical semiaxis of crop ellipse (m)
+        bc = self.io.wc / 2    # Horizontal semiaxis of crop ellipse (m)
         # Calculate psird, the radiometer azimuth relative to a crop row,
         # constrain 0 < psird < 90 deg, where 0 deg is parallel and 90 deg
         # is perdendicular to the crop row
@@ -56,53 +58,54 @@ class canopy:
         # thetarp = Directional radiometer zenith angle projected perpendicular
         # to crop row thetarp can be positive or negative (rad)
         thetarp = np.atan((np.tan(thetar)) * np.sin(psir))
+        thetasp = np.atan(tand(self.sol.solarzenith) * sind(azimuthsunrow))
 
         n = 20 # Limit maximum rows to 20
         thetaspMR = thetasp * np.ones(length(thetasp),n)
         thetarpMR = thetarp * np.ones(length(thetasp),n)
-        rowarray = ones(length(thetasp),n)*np.arange(1,n)
+        rowarray = np.ones((length(thetasp),n))*np.arange(1,n)
 
         # XcrMR = Horizontal distance from canopy ellipse origin to tangent of
         # sunray or directional radiometer view along thetaspcr or thetarpcr,
         # respectively, for multiple rows (n). XscrMR is positive (m)
-        XcrMR = 2 .* ((bc) .^ 2) ./ (rowarray .* Rowsp)
+        XcrMR = 2 * ((bc) ** 2) / (rowarray * self.io.row_width)
 
         # YcrMR = Vertical distance from canopy ellipse origin to tangent of
         # sunray or directional radiometer view along thetaspcr or thetarpcr,
         # respectively, for multiple rows (n). YcrMR is positive (m)
-        YcrMR = sqrt(((ac .^ 2).*XcrMR.*(rowarray .* Rowsp - 2.*XcrMR)) ./2./((bc).^2))
+        YcrMR = np.sqrt(((ac ** 2)*XcrMR*(rowarray * self.io.row_width - 2*XcrMR)) /2/(bc**2))
 
         # thetapcrMR = Critical perpendicular solar zenith angle, where greater
         # angles result in adjacent row shading for multiple rows,
         # or critical perpendicular directional radiometer view angle, where greater
         # angles result in ajacent rows obscuring view for multiple rows.
         # thetapcrMR is positive (rad)
-        thetapcrMR = atan((rowarray .* Rowsp - 2.*XcrMR)./(2.*YcrMR))
+        thetapcrMR = np.atan((rowarray * self.io.row_width - 2*XcrMR)/(2*YcrMR))
 
-        testarrays = rowarray.*(thetaspMR > thetapcrMR)
-        testarrayr = rowarray.*(thetarpMR > thetapcrMR)
+        testarrays = rowarray*(thetaspMR > thetapcrMR)
+        testarrayr = rowarray*(thetarpMR > thetapcrMR)
 
         # Calculate MRFs (solar) and MRFr (directional radiometer)
         # For solar, MultiRow >= 1 daylight only
-        MRFs = (solarzenith<89) .* max(1,(max(testarrays,[],2)))
-        MRFr = max(1, (max(testarrayr,[],2)))
+        MRFs = (self.sol.solarzenith<89) * max(1,testarrays.max(axis=1))
+        MRFr = max(1, testarrayr.max(axis=1))
 
         # Calculate PLFs (solar) and PLFr (directional radiometer)
-        Ysp = ac .* bc ./ sqrt((ac .^ 2) .* ((tan(thetasp)) .^ 2) + (bc .^ 2))
-        Xsp = Ysp .* tan(thetasp)
-        Zsp = Xsp ./ abs(tan(azimuthsunrow))
-        PLFs = (solarzenith<89) .* (sqrt(Xsp .^ 2 + Ysp .^ 2 + Zsp .^ 2)) ./ ac
+        Ysp = ac * bc /np.sqrt((ac ** 2) * ((np.tan(thetasp)) ** 2) + (bc ** 2))
+        Xsp = Ysp* np.tan(thetasp)
+        Zsp = Xsp / np.abs(np.tan(azimuthsunrow))
+        PLFs = (self.sol.solarzenith<89) * (np.sqrt(Xsp ** 2 + Ysp ** 2 + Zsp ** 2)) / ac
 
-        Yrp = ac .* bc ./ sqrt((ac .^ 2) .* ((tan(thetarp)) .^ 2) + (bc .^ 2))
-        Xrp = Yrp .* tan(thetarp)
-        Zrp = Xrp ./ abs(tan(psir))
-        PLFr = (sqrt(Xrp .^ 2 + Yrp .^ 2 + Zrp .^ 2)) ./ ac
+        Yrp = ac * bc / np.sqrt((ac ** 2) * ((np.tan(thetarp)) ** 2) + (bc ** 2))
+        Xrp = Yrp * np.tan(thetarp)
+        Zrp = Xrp / np.abs(np.tan(psir))
+        PLFr = (np.sqrt(Xrp ** 2 + Yrp ** 2 + Zrp ** 2)) / ac
         
-        self.mrf_s =
-        self.mrf_r =
+        self.mrf_s = MRFs
+        self.mrf_r = MRFr
 
-        self.plf_s =
-        self.plf_r =
+        self.plf_s = PLFs
+        self.plf_r = PLFr
 
     def taudir(self):
         # DIRECT BEAM TRANSMITTANCE AND REFLECTANCE
@@ -119,13 +122,13 @@ class canopy:
         
         # Calculate direct beam canopy transmittance for visible and near infrared
         # spectra (CN98, eq. 15.11, p. 257)
-        self.taudir_vis = (((rhodirv ** 2) - 1) * np.exp(-(self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)) / (((rhodirv * self.io.alb_vis) - 1) + rhodirv * (rhodirv - self.io.alb_vis) * np.exp(-2 * (self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs))
-        self.taudir_nir = (((rhodirn ** 2) - 1) * np.exp(-(self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)) / (((rhodirn * self.io.alb_nir) - 1) + rhodirn * (rhodirn - self.io.alb_nir) * np.exp(-2 * (self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs))
+        self.taudir_vis = (((rhodirv ** 2) - 1) * np.exp(-(self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * self.plf_s * self.mrf_s)) / (((rhodirv * self.io.alb_vis) - 1) + rhodirv * (rhodirv - self.io.alb_vis) * np.exp(-2 * (self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * self.plf_s * self.mrf_s))
+        self.taudir_nir = (((rhodirn ** 2) - 1) * np.exp(-(self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * self.plf_s * self.mrf_s)) / (((rhodirn * self.io.alb_nir) - 1) + rhodirn * (rhodirn - self.io.alb_nir) * np.exp(-2 * (self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * self.plf_s * self.mrf_s))
 
         # Calculate direct beam canopy reflectance for visible and near infrared
         # spectra (CN98, eq. 15.9, p. 257)
-        xidirv = ((rhodirv - self.io.alb_vis)/ (rhodirv * self.io.alb_vis - 1)) * np.exp(-2 * (self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)
-        xidirn = ((rhodirn - self.io.alb_nir) / (rhodirn * self.io.alb_nir - 1)) * exp(-2 * (self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * PLFs * MRFs)
+        xidirv = ((rhodirv - self.io.self.io.alb_vis)/ (rhodirv * self.io.self.io.alb_vis - 1)) * np.exp(-2 * (self.io.zeta_vis ** 0.5) * Kbs * self.io.LAIL * self.plf_s * self.mrf_s)
+        xidirn = ((rhodirn - self.io.self.io.alb_nir) / (rhodirn * self.io.self.io.alb_nir - 1)) * exp(-2 * (self.io.zeta_nir ** 0.5) * Kbs * self.io.LAIL * self.plf_s * self.mrf_s)
         self.rhocsdir_vis = (rhodirv + xidirv) / (1 + xidirv * rhodirv)
         self.rhocsdir_nir = (rhodirn + xidirn) / (1 + xidirn * rhodirn)
        
@@ -138,21 +141,21 @@ class canopy:
 
         # Calculate multiple row factor for a solar beam through the canopy
         # for each solar zenith and azimuth element (Colaizzi et al. 2012)
-        thetasi = np.ones(len(hc)) * np.arange(5,85,5) # Solar zenith array (2D)
-        psisi = np.arange(5,85,5) # Solar azimuth vector
+        psisi = np.arange(5,85,5).reshape(1,-1) # Solar azimuth vector
+        thetasi = np.ones((len(self.io.hc),len(psisi))) * psisi # Solar zenith array (2D)
         # Solar azimuth array (3D)
-        psisi3 = np.ones(thetasi.shape) * reshape(psisi, 1, 1,[])
+        psisi3 = np.ones(*thetasi.shape,1) * psisi.reshape(1, -1,1)
         # Projected solar zenith array (3D)
-        tanthetaspi = ((tand(thetasi)) * sind(psisi3))
+        tanthetaspi = ((tand(thetasi[:,:,np.newaxis])) * sind(psisi3))
         # Multiple row factor for solar beam (3D)
-        MRFsi = max(1, floor(tanthetaspi * hc / self.io.row_width))
+        MRFsi = max(1, np.floor(tanthetaspi * self.io.hc / self.io.row_width))
 
         # Calculate path length fraction for a solar beam through the canopy
         # for each solar zenith and azimuth element (Colaizzi et al. 2012) (3D)
-        Yspi = ac * bc / sqrt((ac ** 2) * (tanthetaspi ** 2) + (bc ** 2))
+        Yspi = ac * bc / np.sqrt((ac ** 2) * (tanthetaspi ** 2) + (bc ** 2))
         Xspi = Yspi * tanthetaspi
         Zspi = Xspi / abs(tand(psisi3))
-        PLFsi = (sqrt(Xspi ** 2 + Yspi ** 2 + Zspi ** 2)) / ac
+        PLFsi = (np.sqrt(Xspi ** 2 + Yspi ** 2 + Zspi ** 2)) / ac
 
         # Calculate direct beam extinction coefficient for each solar zenith
         # element (CN98, 15.4, p. 251) (2D, independent of solar azimuth)
@@ -165,42 +168,28 @@ class canopy:
 
         # Calculate direct beam canopy transmittance for visible and near infrared
         # spectra for each solar zenith and azimuth element (CN98, eq. 15.11, p. 257)
-        taudirvi = (((rhodirvi ** 2) - 1) * ...
-                        exp(-(Leafabsv ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)) / ...
-            (((rhodirvi * SoilAlbvis) - 1) + rhodirvi * (rhodirvi - SoilAlbvis) * ...
-                 exp(-2 * (Leafabsv ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi))
-        taudirni = (((rhodirni ** 2) - 1) * ...
-                            exp(-(Leafabsn ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)) / ...
-                (((rhodirni * SoilAlbnir) - 1) + rhodirni * (rhodirni - SoilAlbnir) * ...
-                     exp(-2 * (Leafabsn ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi))
+        taudirvi = (((rhodirvi ** 2) - 1) * np.exp(-(self.io.zeta_vis ** 0.5) * Kbsi * self.io.LAIL * PLFsi * MRFsi)) / (((rhodirvi * self.io.alb_vis) - 1) + rhodirvi * (rhodirvi - self.io.alb_vis) * np.exp(-2 * (self.io.zeta_vis ** 0.5) * Kbsi * self.io.LAIL * PLFsi * MRFsi))
+        taudirni = (((rhodirni ** 2) - 1) * np.exp(-(self.io.zeta_nir ** 0.5) * Kbsi * self.io.LAIL * PLFsi * MRFsi)) / (((rhodirni * self.io.alb_nir) - 1) + rhodirni * (rhodirni - self.io.alb_nir) * np.exp(-2 * (self.io.zeta_nir ** 0.5) * Kbsi * self.io.LAIL * PLFsi * MRFsi))
 
         # Calculate diffuse canopy transmittance for visible and near infrared
         # spectra by integrating taudirvi and taudirni, repsectively
-        taudirvi1 = 4 * (1 / 90) * (1 / 90) * ...
-                                        ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * taudirvi
-        taudirni1 = 4 * (1 / 90) * (1 / 90) * ...
-                                            ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * taudirni
-        taudiffVIS = sum(taudirvi1, [2, 3])
-        taudiffNIR = sum(taudirni1, [2, 3])
+        taudirvi1 = 4 * (1 / 90) * (1 / 90) * ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * taudirvi
+        taudirni1 = 4 * (1 / 90) * (1 / 90) * ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * taudirni
+        self.taudiff_vis = np.sum(taudirvi1, axis=[1, 2])
+        self.taudiff_nir = np.sum(taudirni1, [1, 2])
 
 
         # Calculate direct beam canopy + soil reflectance for visible and near infrared
         # spectra for each solar zenith and azimuth element (CN98, eq. 15.9, p. 257)
-        xidirvi = ((rhodirvi - SoilAlbvis) / (rhodirvi * SoilAlbvis - 1)) * ...
-            exp(-2 * (Leafabsv ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)
-        xidirni = ((rhodirni - SoilAlbnir) / (rhodirni * SoilAlbnir - 1)) * ...
-            exp(-2 * (Leafabsn ** 0.5) * Kbsi * LAIL * PLFsi * MRFsi)
+        xidirvi = ((rhodirvi - self.io.alb_vis) / (rhodirvi * self.io.alb_vis - 1)) * np.exp(-2 * (self.io.zeta_vis ** 0.5) * Kbsi * self.io.LAIL * PLFsi * MRFsi)
+        xidirni = ((rhodirni - self.io.alb_nir) / (rhodirni * self.io.alb_nir - 1)) * np.exp(-2 * (self.io.zeta_nir ** 0.5) * Kbsi * self.io.LAIL * PLFsi * MRFsi)
         rhocsdirvi = (rhodirvi + xidirvi) / (1 + xidirvi * rhodirvi)
         rhocsdirni = (rhodirni + xidirni) / (1 + xidirni * rhodirni)
 
         # Calculate diffuse canopy reflectance for visible and near infrared
         # spectra by integrating rhocsdirvi and rhocsdirni, repsectively
-        rhocsdirvi1 = 4 * (5 / 85) * (5 / 85) * ...
-            ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * rhocsdirvi
-        rhocsdirni1 = 4 * (5 / 85) * (5 / 85) * ...
-                                                            ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * rhocsdirni
-        rhocsdiffVIS = sum(rhocsdirvi1, [2, 3])
-        rhocsdiffNIR = sum(rhocsdirni1, [2, 3])
+        rhocsdirvi1 = 4 * (5 / 85) * (5 / 85) * ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * rhocsdirvi
+        rhocsdirni1 = 4 * (5 / 85) * (5 / 85) * ((sind(thetasi)) ** 2) * ((cosd(thetasi)) ** 2) * rhocsdirni
+        self.rhocsdiff_vis = np.sum(rhocsdirvi1, [1, 2])
+        self.rhocsdiff_nir = np.sum(rhocsdirni1, [1, 2])
  
-        self.taudiff_vis =
-        self.taudiff_nir =
