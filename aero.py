@@ -81,37 +81,50 @@ class resistances:
         #X      #Used to compute psih and psim in unstable conditions
         #u      #Wind speed adjusted over crop ( m s-1)
         
-        self.mask_veg = self.io.fveg>0 and self.io.hr<=self.io.hc
-        self.mask_bare = self.io.fveg<=0 and self.io.fres<=0
-        self.mask_res = self.io.fveg<=0 and self.io.fres>0
-        self.mask_tall_res = self.io.fveg>0 and self.io.hr>self.io.hc
-
-        self.d, self.zom, self.zoh = self.roughness_lengths()
-        
+        self.mask_bare = (self.io.f_veg<=0) & (self.io.f_res<=0)
+        self.mask_flat_res = (self.io.f_veg<=0) & (self.io.f_res>0) & (~self.io.stubble)
+        self.mask_stand_res = (self.io.f_veg<=0) & (self.io.f_res>0) & (self.io.stubble)
+        self.mask_veg_no_res = (self.io.f_veg>0) & (self.io.f_res<=0)
+        self.mask_veg_flat_res = (self.io.f_veg>0) & (self.io.f_res>0) & (~self.io.stubble) 
+        self.mask_veg_tall_stand_res = (self.io.f_veg>0) & (self.io.f_res>0) & (self.io.stubble) & (self.io.hr>self.io.hc)
+        self.mask_veg_short_stand_res = (self.io.f_veg>0) & (self.io.f_res>0) & (self.io.stubble) & (self.io.hr<=self.io.hc)
+                
     def roughness_lengths(self):
-        d = np.zeros(self.Ta.shape)
-        zom = np.zeros(self.Ta.shape)
-        zoh = np.zeros(self.Ta.shape)
+        #canopy
+        self.d_c=self.io.dhc * self.hc
+        self.zom_c=self.io.zomhc * self.hc
+        self.zoh_c=self.io.zohzomc * self.zom
+        #surface
+        self.d_bs=self.io.dhbs * self.hbs
+        self.zom_bs=self.io.zomhbs * self.hbs
+        self.zoh_bs=self.io.zohzombs * self.zom_bs
+        self.d_fr=self.io.dhfr * self.hfr
+        self.zom_fr=self.io.zomhfr * self.hfr
+        self.zoh_fr=self.io.zohzomfr * self.zom_fr
+        self.d_ss=self.io.dhss * self.hss
+        self.zom_ss=self.io.zomhss * self.hss
+        self.zoh_ss=self.io.zohzomss * self.zom_ss
+
+        self.d_s[self.io.stubble]=self.d_ss[self.io.stubble]
+        self.zom_s[self.io.stubble]=
+        self.zoh_s[self.io.stubble]=
         
-        d[self.mask_veg] = dhc * self.hc[self.mask_veg]
-        zom[self.mask_veg] = zomhc * self.hc[self.mask_veg]
-        zoh[self.mask_veg] = zohzomc[self.mask_veg] * self.zom[self.mask_veg]
-        
-        d[self.mask_tall_res] = dhr * self.hr[self.mask_tall_res]
-        zom[self.mask_tall_res] = zomhr * self.hr[self.mask_tall_res]
-        zoh[self.mask_tall_res] = zohzomr * self.zom[self.mask_tall_res]
+        self.d_s[(~self.io.stubble) & (self.io.f_res>0)]=
+        self.zom_s[(~self.io.stubble) & (self.io.f_res>0)]=
+        self.zoh_s[(~self.io.stubble) & (self.io.f_res>0)]=
 
-        d[self.mask_res] = dhr * self.hr[self.mask_res]
-        zom[self.mask_res] = zomhr * self.hr[self.mask_res]
-        zoh[self.mask_res] = zohzomr * self.zom[self.mask_res]
+        self.d_s[(~self.io.stubble) & (~self.io.f_res>0)]=
+        self.zom_s[(~self.io.stubble) & (~self.io.f_res>0)]=
+        self.zoh_s[(~self.io.stubble) & (~self.io.f_res>0)]=
 
-        d[self.mask_bare] = dhs * self.hs[self.mask_bare]
-        zom[self.mask_bare] = zomhs * self.hs[self.mask_bare]
-        zoh[self.mask_bare] = zohzoms * self.zom[self.mask_bare]
+        self.d[(~self.io.f_veg>0)]=self.d_s[(~self.io.f_veg>0)]
+        self.zom[(~self.io.f_veg>0)]=
+        self.zoh[(~self.io.f_veg>0)]=
 
-        self.d=d
-        self.zom=zom
-        self.zoh=zoh
+        self.d[(self.io.f_veg>0)]=self.d_c[(self.io.f_veg>0)]
+        self.zom[(self.io.f_veg>0)]=
+        self.zoh[(self.io.f_veg>0)]=
+
         
     def rah_calc(self): 
         #def to compute aerodynamic resistance (s/m) using Monin-Obukov (1954)
@@ -121,7 +134,7 @@ class resistances:
         PsiM = np.zeros(self.io.T_rad.shape)
         PsiH = np.zeros(self.io.T_rad.shape)
         uf = vonk * self.io.u / ((np.log((self.io.zu - self.d) / self.zom)) - PsiM)
-        rahmost = ((np.log((self.io.zu - d) / (self.zoh))) - PsiH) / (vonk * uf)
+        rahmost = ((np.log((self.io.zu - self.d) / (self.zoh))) - PsiH) / (vonk * uf)
         dT = self.io.Ta - self.io.T_rad
 
         if np.abs(dT) < 0.01: dT = 0.01
@@ -138,7 +151,7 @@ class resistances:
             PsiM[L>0] = -5 * (self.io.zu - self.d) / L
 
             #Unstable conditions
-            X = (1 - 16 * (zu - d) / L) ** 0.25
+            X = (1 - 16 * (self.io.zu - self.d) / L) ** 0.25
             PsiH[L<=0] = 2 * np.log((1 + (X ** 2)) / 2)
             PsiM[L<=0] = 2 * np.log((1 + X) / 2) + np.log((1 + (X ** 2)) / 2) - 2 * np.atan(X) + pi / 2
 
@@ -170,27 +183,26 @@ class resistances:
         
 
     def rsh_calc(self): 
-        #def rsh to compute resistance of heat transport between soil and canopy displacement height
-        #Taken from Norman et al. (1995) Appendix B AND Kustas and Norman (1999)
+        #def rsh to compute resistance of heat transport between soil/residue and canopy displacement height
+        if False:
+            #Taken from Norman et al. (1995) Appendix B AND Kustas and Norman (1999)
 
-        #Variables internal to this function
-        #Uc     #Wind speed at top of canopy (m s-1)
-        #A      #Empirical factor
-        #Us     #Wind speed just above the soil surface (m s-1)
-        #PsiM   #Stability correction for momentum at top of canopy,
-        #                    assumed negligible due to roughness effects in the sublayer
+            #Variables internal to this function
+            #Uc     #Wind speed at top of canopy (m s-1)
+            #A      #Empirical factor
+            #Us     #Wind speed just above the soil surface (m s-1)
+            #PsiM   #Stability correction for momentum at top of canopy,
+            #                    assumed negligible due to roughness effects in the sublayer
 
-        PsiM = np.zeros(self.io.T_rad.shape)
-        
-        uc = self.io.u * (np.log((self.io.hc - self.d) / self.zom)) / ((np.log((self.io.zu - self.d) / self.zom)) - PsiM)
-        A = 0.28 * (self.io.LAIL ** (2 / 3)) * (self.io.hc ** (1 / 3)) * (self.io.s ** (-1 / 3))
-        us = uc * np.exp(-A * (1 - (0.05 / self.io.hc)))
-        self.rsh = 1 / (self.io.c * ((np.abs(self.io.T_s - self.io.T_c)) ** (1 / 3)) + self.io.b * us)
+            PsiM = np.zeros(self.io.T_rad.shape)
 
-    def rrh_stand(self):
-        #standing residue thermal resistance per Aiken 2003
-        return None
-    
-    def rrh_flat(self):
-        #flat residue thermal resistance per Lagos 2009
-        return None
+            uc = self.io.u * (np.log((self.io.hc - self.d) / self.zom)) / ((np.log((self.io.zu - self.d) / self.zom)) - PsiM)
+            A = 0.28 * (self.io.LAIL ** (2 / 3)) * (self.io.hc ** (1 / 3)) * (self.io.s ** (-1 / 3))
+            us = uc * np.exp(-A * (1 - (0.05 / self.io.hc)))
+            self.rsh = 1 / (self.io.c * ((np.abs(self.io.T_s - self.io.T_c)) ** (1 / 3)) + self.io.b * us)
+        else:
+            #SW model (1990)
+            alpha = 2.5
+            u_s = vonk*self.io.u/np.log((self.io.zu-self.d)/self.zom)#friction velocity
+            Kh = vonk*u_s*(self.io.hc-self.d)#eddy diffusion coefficient at the top of the canopy
+            self.rsh = self.hc*np.exp(alpha)/(alpha*Kh)*(np.exp(-alpha*self.zom_s/self.hc)-np.exp(-alpha*(self.d+self.zom)/self.hc))

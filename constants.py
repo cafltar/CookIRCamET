@@ -69,14 +69,19 @@ class inputs:
                 self.zohzomhc = 1#heat roughness over momentum roughness C&N say .2,
                 # K95 say exp(-2),
                 # K99 set equal for series model
-                #bare soil roughness
-                self.hs = .4e-3 #m
+                #surface roughness - bare soil
+                self.dhbs = 0 #m
                 self.zombs = 1 #m
                 self.zohzombs = np.exp(-4.5) #from Stewart paper
                 #Stewart, J. B., W. P. Kustas, K. S. Humes, W. D. Nichols, M. S.
                 #Moran, and H. A. R. de Bruin, 1994: Sensible heat fluxradiometric
                 #surface temperature relationship for eight semiarid
                 #areas. J. Appl. Meteor., 33, 1110–1117.
+                #soil heat flux
+                #standing stubble
+                self.dhss = 0.53 #m
+                self.zomss = 0.058 #m
+                self.zohzomss = 0.2 #from Sauer 1996
                 #soil heat flux
                 self.grn_day = -0.1
                 self.grn_night = -0.5
@@ -151,21 +156,32 @@ class inputs:
                 self.P[np.isnan(self.P)]=aero.P_from_z(self.ele)
                 self.Ta
                 self.RH
+                self.u
                 #compute ea, esa
                 self.ea = aero.ea(self.P , self.Ta , self.RH)
                 self.esa = aero.esa(self.Ta)
                 self.Rs = 
                 self.latent = aero.latent(self.Ta)
                 self.rho_a = aero.rho_a(self.Ta,self.ea,self.P)
-                self.LAI =
-                self.wc =
-                self.wc[np.isnan(self.wc)]=(self.f_veg_sun[np.isnan(self.wc)]+self.f_veg_shade[np.isnan(self.wc)])*self.rowc[np.isnan(self.wc)]
-                self.hc =
-                self.LAIL = self.LAIL*self.rowc/self.wc
                 self.precip =
                 self.irrig =
+
+    def read_crop(self):
+        for f in os.listdir(p):
+            if 'crop' in f and f[-4:]=='.csv':
+                crop = read_csv(os.path.join(p,f))
+                self.LAI =
+                self.SAI = #stem area index (stubble)
+                self.wc =
+                self.wc[np.isnan(self.wc)]=(self.f_veg_sun[np.isnan(self.wc)]+self.f_veg_shade[np.isnan(self.wc)])*self.rowc[np.isnan(self.wc)]
+                self.hc = #canopy height
+                self.hbs = #soil roughness Campbell & Norman 1998 2-6 mm
+                self.hfr = #residue flat 1cm
+                self.hss = #residue standing
+                self.stubble = #logical - true if stubble, false if flat or none 
+                self.LAIL = self.LAIL*self.rowc/self.wc
                 
-    def read_can(self):
+    def read_images(self):
         for f in os.listdir(p):
             if 'cvfractions' in f and f[-4:]=='.csv':
                 cvfractions = read_csv(os.path.join(p,f))
@@ -184,11 +200,16 @@ class inputs:
                 self.f_soil = self.f_soil_shade+self.f_soil_sun
                 self.f_res = self.f_res_shade+self.f_res_sun
                 self.f_veg = self.f_veg_shade+self.f_veg_sun
+                self.hs[(~self.stubble)] = mp.maximum(self.hr,self.hbs)
                 #relative soil fraction of ground
                 self.f_soil_rel = self.f_soil/(self.f_soil+self.f_res)
-                
-    def soil_albedo(RWC):                                                   
+                self.T_surf = ((self.f_soil_sun*self.T_soil_sun**4+self.f_soil_shade*self.T_soil_shade**4+self.f_res_sun*self.T_res_sun**4+self.f_res_shade*self.T_res_shade**4)/(self.f_res+self.f_soil))**(1/4)
+                self.T_veg = ((self.f_veg_sun*self.T_veg_sun**4+self.f_veg_shade*self.T_veg_shade**4)/(self.f_veg))**(1/4)
+                self.Tac = np.na*np.ones(self.T_veg.shape)
+    def soil_albedo(self,RWC):                                                   
         self.soil_alb_vis =#Soil albedo in visible band, DAILY time steps (no units)                                               
         self.soil_alb_nir = #Soil albedo in nir band, DAILY time steps (no units)
         self.res_alb_vis =#Soil albedo in visible band, DAILY time steps (no units)                                               
         self.res_alb_nir = #Soil albedo in nir band, DAILY time steps (no units)
+        self.alb_vis =#total albedo in visible band, DAILY time steps (no units)                                               
+        self.alb_nir = #total albedo in nir band, DAILY time steps (no units)
