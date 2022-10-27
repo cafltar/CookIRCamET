@@ -13,7 +13,7 @@ from picamera import PiCamera
 import logging 
 
 #image resolution
-ry,rx=960,544#160,128#256,192#3840,2160
+ry,rx=2592,1952#3840,2160#160,128#256,192#960,544
 global ex   
 global gain
 ex = None    
@@ -50,7 +50,7 @@ def ircapture():
     n = 0
     m = 0
     with Lepton3(device) as l:
-        while t>0.048 and m<10:
+        while t>0.048 and m<50:
             a,_,t = l.capture()
             sleep(.185)
             #if n>10:
@@ -79,7 +79,8 @@ def bgrcapture(ry,rx):
         # Now fix the values
         if ex is None:
             ex = camera.exposure_speed
-        camera.shutter_speed = ex
+        #camera.exposure_speed = ex
+        camera.shutter_speed = 1000#ex 1ms
         camera.exposure_mode = 'off'
         camera.awb_mode = 'off'
         if gain is None:
@@ -89,7 +90,7 @@ def bgrcapture(ry,rx):
         # Camera warm-up time
         sleep(2)
         camera.capture(image,'bgr')
-
+        
         return image.reshape((rx,ry,3))
 
 
