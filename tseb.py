@@ -19,44 +19,47 @@ p = os.path.join(home,'CookIRCamET','Working')
 data = inputs()
 resistance = aero.resistances(data)
 radiation = solar.radiation(data)
-partition = canopy.radiation(data)
-flux = fluxes.rad_fluxes(data)
 
 #calculate roughness params
 resistance.roughness_lengths()
+
 #calculate resistances
-resistance.roughness_lengths()
 resistance.rah_calc()
 resistance.rx_calc()
 resistance.rs_calc()
+data.Tac = 
+
 #calculate solar radiation
-radiation.solar_angles()
-radiation.solar_angles()
-radiation.solar_angles()
-radiation.solar_angles()
+radiation.solarangles()
+radiation.Rso()
+radiation.Kbeam()
 
 #calculate canopy transmissivity/reflectivity/soil albedo
-partition.fdhc()
-partition.
-partition.
-partition.
-partition.
-partition.
+partition = canopy.radiation(data, radiation)
+partition.fdhc_calc()
+partition.fsis_calc()
+partition.mrf_plf_calc()
+partition.taudir()
+partition.taudiff()
 
 #Calculate radiation partitioning
-fluxes.Rnlw()
-fluxes.Rnsw()
-
-#calculate aerodynamic resistances
-resistance.roughness_lengths
-resistance.rs
-resistance.rx
-resistance.rah
+flux = fluxes.rad_fluxes(data,radiation,partition)
+Lns = flux.Lns()
+Lnr = flux.Lnr()
+Lnc = flux.Lnc()
+Sns = flux.Sns()
+Snr = flux.Snr()
+Snc = flux.Snc()
+Rns = Sns + Lns
+Rnr = Snr + Lnr
+Rnc = Snc + Lnc 
 
 #calculate ground heat flux, sensible heat flux, latent heat flux
-G = fluxes.G(Rns)
+G = fluxes.G(Rns+Rnr)
+Hr =
 Hs
 Hc
+LEr
 LEs
 LEc
 E

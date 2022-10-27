@@ -10,41 +10,48 @@ import os
 import numpy as np
 import logging 
 
-def Rnminmax(year_doy,Rn):
-    days = np.unique(year_doy)
-    Rnmax = np.zeros(Rn.shape)
-    Rnmin = np.zeros(Rn.shape)    
-    for i in range(days.shape[0]):
-        mask = year_doy[:,0]==days[i,0] & year_doy[:,1]==days[i,1]
-        Rmax_day = np.max(Rn[mask])
-        Rmin_day = np.min(Rn[mask])
-        Rnmax[mask]=Rmax_day
-        Rnmin[mask]=Rmin_day
-    return Rnmax, Rnmin
+class aero_fluxes:
+    def __init__(self,inputs_obj,rad_obj,resistance_obj):
+        self.io = inputs_obj
+        self.rs = resistance_obj
+        self.rad = rad_obj
+        
+    def Rnminmax(self):
+        days = np.unique(self.io.doy)
+        Rnmax = np.zeros(Rn.shape)
+        Rnmin = np.zeros(Rn.shape)    
+        for i in range(days.shape[0]):
+            mask = year_doy[:,0]==days[i,0] & year_doy[:,1]==days[i,1]
+            Rmax_day = np.max(Rn[mask])
+            Rmin_day = np.min(Rn[mask])
+            Rnmax[mask]=Rmax_day
+            Rnmin[mask]=Rmin_day
+        return Rnmax, Rnmin
 
-def G(R):
-    #R (soil or residue) 24 hour time series
-    #G (soil or residue) 24 hour time series
-    #from Colaizzi 2016    
-    Rmax, Rmin = Rnminmax(time, R)
-    return (R-Rmin)/(Rmax-Rmin)*(aG*Rmax+Rmin)-Rmin
-    
-def LE(H,Rn,G):
-    return Rn-G-H
-def LEc(Hc,Rnc):
-    return Rnc-Hc
-def LEs(Rns,Hs,Gs):
-    return Rns-Hs-Gs
-def LEs(Rnr,Hr,Gr):
-    return Rnr-Hr-Gr
-def H(Tac,Ta,ra):
-    return aero.rho_a(Tac)*(Tac-Ta)/ra*c_p
-def Hc(Tac,Tc,rx):
-    return aero.rho_a(Tac)*(Tc-Tac)/rx*c_p
-def Hs(Tac,Ts,ra,fs):
-    return aero.rho_a(Tac)*(Ts-Tac)/rs*c_p
-def Hr(Tac,Tr,rr,fs):
-    return aero.rho_a(Tac)*(Tr-Tac)/rr*c_p
+    def G(self):
+        #R (soil or residue) 24 hour time series
+        #G (soil or residue) 24 hour time series
+        #from Colaizzi 2016    
+        Rmax, Rmin = Rnminmax(time, R)
+        return (R-Rmin)/(Rmax-Rmin)*(aG*Rmax+Rmin)-Rmin
+
+    def LE(self):
+        return Rn-G-H
+    def LEc(Hc,Rnc):
+        return Rnc-Hc
+    def LEs(Rns,Hs,Gs):
+        return Rns-Hs-Gs
+    def LEs(Rnr,Hr,Gr):
+        return Rnr-Hr-Gr
+    def T_ac(self):
+    def H(Tac,Ta,ra):
+        return aero.rho_a(Tac)*(Tac-Ta)/ra*c_p
+    def Hc(Tac,Tc,rx):
+        return aero.rho_a(Tac)*(Tc-Tac)/rx*c_p
+    def Hs(Tac,Ts,ra,fs):
+        return aero.rho_a(Tac)*(Ts-Tac)/rs*c_p
+    def Hr(Tac,Tr,rr,fs):
+        return aero.rho_a(Tac)*(Tr-Tac)/rr*c_p
 
 class rad_fluxes:
     def __init__(self,inputs_obj,solar_obj,canopy_obj):
@@ -106,6 +113,12 @@ class rad_fluxes:
 
         return SncdirVis + SncdiffVis + SncdirNir + SncdiffNir
 
+    def R_net(self):
+        self.Rnr = Snr+Lnr
+        self.Rns = Sns+Lns
+        self.Rnc = Snc+Lnc
+        self.Rng = self.Rnr+self.Rns #for ground heat flux
+        
 
                 
 

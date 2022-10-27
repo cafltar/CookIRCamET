@@ -144,7 +144,7 @@ class canopy:
         psisi = np.arange(5,85,5).reshape(1,-1) # Solar azimuth vector
         thetasi = np.ones((len(self.io.hc),len(psisi))) * psisi # Solar zenith array (2D)
         # Solar azimuth array (3D)
-        psisi3 = np.ones(*thetasi.shape,1) * psisi.reshape(1, -1,1)
+        psisi3 = np.ones(*thetasi.shape,1) * psisi.reshape(1,1,-1)
         # Projected solar zenith array (3D)
         tanthetaspi = ((tand(thetasi[:,:,np.newaxis])) * sind(psisi3))
         # Multiple row factor for solar beam (3D)
