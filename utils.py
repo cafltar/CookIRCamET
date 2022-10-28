@@ -1,3 +1,4 @@
+
 import sys
 import numpy as np
 import cv2
@@ -13,7 +14,7 @@ from picamera import PiCamera
 import logging 
 
 #image resolution
-ry,rx=2592,1952#3840,2160#160,128#256,192#960,544
+ry,rx=1280,960#1920,1440#2592,1952#3840,2160#160,128#256,192#960,544
 global ex   
 global gain
 ex = None    
@@ -79,7 +80,6 @@ def bgrcapture(ry,rx):
         # Now fix the values
         if ex is None:
             ex = camera.exposure_speed
-        #camera.exposure_speed = ex
         camera.shutter_speed = 1000#ex 1ms
         camera.exposure_mode = 'off'
         camera.awb_mode = 'off'
