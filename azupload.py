@@ -1,5 +1,4 @@
 
-
 from azure.identity import DefaultAzureCredential,ClientSecretCredential
 from azure.storage.blob import BlobServiceClient
 import os
@@ -10,7 +9,7 @@ def upload_file(client,source, dest):
     '''
     print(f'Uploading {source} to {dest}')
     with open(source, 'rb') as data:
-        client.upload_blob(name=dest, data=data)
+        client.upload_blob(name=dest, data=data, overwrite=True)
         
 def upload_dir(client, source, dest):
     '''
@@ -25,7 +24,7 @@ def upload_dir(client, source, dest):
             file_path = os.path.join(root, name)
             blob_path = prefix + dir_part + name
             upload_file(client,file_path, blob_path)
-
+            print(file_path)
 # In[14]:
 
 
@@ -55,6 +54,6 @@ raw = blob_service_client.get_container_client("raw")
 work = blob_service_client.get_container_client("work")
 
 
-upload_dir(raw,'../raw/CookIRCamET/','CookIRCamET')
-upload_dir(work,'../work/CookIRCamET/','CookIRCamET')
+upload_dir(raw,'../../raw/CookIRCamET/','CookIRCamET')
+upload_dir(work,'../../work/CookIRCamET/','CookIRCamET')
 
