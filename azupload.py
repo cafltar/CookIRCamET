@@ -24,7 +24,6 @@ def upload_dir(client, source, dest):
             file_path = os.path.join(root, name)
             blob_path = prefix + dir_part + name
             upload_file(client,file_path, blob_path)
-            print(file_path)
 # In[14]:
 
 
