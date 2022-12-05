@@ -80,7 +80,7 @@ def bgrcapture(ry,rx):
         # Now fix the values
         if ex is None:
             ex = camera.exposure_speed
-        camera.shutter_speed = 1000#ex 1ms
+        #camera.shutter_speed = 1000#ex 1ms
         camera.exposure_mode = 'off'
         camera.awb_mode = 'off'
         if gain is None:
