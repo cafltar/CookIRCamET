@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[5]:
+# In[ ]:
 
 
 import sys
@@ -17,22 +17,25 @@ from matplotlib import pyplot as plt
 from pandas import read_csv, read_excel, DataFrame
 from skimage.feature import hessian_matrix_det as Hessian
 from skimage.feature import local_binary_pattern as LBP
+from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from sklearn.feature_selection import RFECV
 from sklearn import svm
+from sklearn.linear_model import SGDClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import logging
 logging.basicConfig(level=logging.INFO)
 
-p = os.path.join('../../','raw','CookIRCamET','Images','CookTests','MedRes')
-p2 = os.path.join('../../','work','CookIRCamET','Images','CookTests','MedRes')
-n_feat = 42
+p = os.path.join('../../','work','CookIRCamET','Images','HY2023','RGB')
+p2 = os.path.join('../../','work','CookIRCamET','Images','HY2023','Labels')
 n_components1 = 2
-n_components2 = 3
+n_components2 = 4
+n_components3 = 8
 
 
-# In[6]:
+# In[ ]:
 
 
 def localSD(mat, n):    
@@ -45,12 +48,11 @@ def localSD(mat, n):
     return sd
 
 
-# In[7]:
+# In[ ]:
 
 
 f_imgs=[]
-test_imgs=[]
-train_imgs=[]
+imgs=[]
 n_img=0
 fs=os.listdir(p)
 shuffle(fs)
@@ -58,10 +60,10 @@ for f in fs:
     if 'bgr' in f:
         f_imgs = np.append(f_imgs,f)
         bgr = cv2.imread(os.path.join(p,f),cv2.IMREAD_UNCHANGED)
-        f_labels = f.split('_nofix_bgr')[0]+'_sun.tif'
-        labels1 = cv2.imread(os.path.join(p,f_labels),cv2.IMREAD_UNCHANGED)
-        f_labels = f.split('_nofix_bgr')[0]+'_src.tif'
-        labels2 = cv2.imread(os.path.join(p,f_labels),cv2.IMREAD_UNCHANGED)
+        f_labels = f.split('_bgr')[0]+'_class2.tif'
+        labels1 = cv2.imread(os.path.join(p2,'SunShade',f_labels),cv2.IMREAD_UNCHANGED)
+        f_labels = f.split('_bgr')[0]+'_class4.tif'
+        labels2 = cv2.imread(os.path.join(p2,'SoilResVegSnow',f_labels),cv2.IMREAD_UNCHANGED)
         lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
         hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
         img = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
@@ -116,55 +118,38 @@ for f in fs:
         lbp_v2 = LBP(v, 24, 3, method='ror')
         lbp_v3 = LBP(v, 16, 2, method='ror')
         
-        plt.subplot(831)
-        plt.imshow(sd_l1)
-        plt.subplot(832)
-        plt.imshow(sd_l2)
-        plt.subplot(833)
-        plt.imshow(sd_l2)
-        plt.subplot(834)
-        plt.imshow(sd_a1)
-        plt.subplot(835)
-        plt.imshow(sd_a2)
-        plt.subplot(836)
-        plt.imshow(sd_a3)
-        plt.subplot(837)
-        plt.imshow(sd_b1)
-        plt.subplot(838)
-        plt.imshow(sd_b2)
-        plt.subplot(839)
-        plt.imshow(sd_b3)
-        plt.subplot(8,3,10)
-        plt.imshow(sd_h1)
-        plt.subplot(8,3,11)
-        plt.imshow(sd_h2)
-        plt.subplot(8,3,12)
-        plt.imshow(sd_h3)
-        plt.subplot(8,3,13)
-        plt.imshow(sd_s1)
-        plt.subplot(8,3,14)
-        plt.imshow(sd_s2)
-        plt.subplot(8,3,15)
-        plt.imshow(sd_s3)
-        plt.subplot(8,3,16)
-        plt.imshow(sd_v1)
-        plt.subplot(8,3,17)
-        plt.imshow(sd_v2)
-        plt.subplot(8,3,18)
-        plt.imshow(sd_v3)
-        plt.subplot(8,3,19)
-        plt.imshow(l)
-        plt.subplot(8,3,20)
-        plt.imshow(a)
-        plt.subplot(8,3,21)
-        plt.imshow(bb)
-        plt.subplot(8,3,22)
-        plt.imshow(h)
-        plt.subplot(8,3,23)
-        plt.imshow(s)
-        plt.subplot(8,3,24)
-        plt.imshow(v)
-        plt.show()
+        ddepth = cv2.CV_16S
+        
+        lap_l1 = cv2.Laplacian(l,ddepth,ksize=3)
+        lap_l2 = cv2.Laplacian(l,ddepth,ksize=7)
+        lap_l3 = cv2.Laplacian(l,ddepth,ksize=15)
+        
+        lap_a1 = cv2.Laplacian(a,ddepth,ksize=3)
+        lap_a2 = cv2.Laplacian(a,ddepth,ksize=7)
+        lap_a3 = cv2.Laplacian(a,ddepth,ksize=15)
+        
+        lap_b1 = cv2.Laplacian(bb,ddepth,ksize=3)
+        lap_b2 = cv2.Laplacian(bb,ddepth,ksize=7)
+        lap_b3 = cv2.Laplacian(bb,ddepth,ksize=15)
+        
+        lap_h1 = cv2.Laplacian(h,ddepth,ksize=3)
+        lap_h2 = cv2.Laplacian(h,ddepth,ksize=7)
+        lap_h3 = cv2.Laplacian(h,ddepth,ksize=15)
+        
+        lap_s1 = cv2.Laplacian(s,ddepth,ksize=3)
+        lap_s2 = cv2.Laplacian(s,ddepth,ksize=7)
+        lap_s3 = cv2.Laplacian(s,ddepth,ksize=15)
+        
+        lap_v1 = cv2.Laplacian(v,ddepth,ksize=3)
+        lap_v2 = cv2.Laplacian(v,ddepth,ksize=7)
+        lap_v3 = cv2.Laplacian(v,ddepth,ksize=15)
+        
+        if False:
+            plt.subplot(211)
+            plt.imshow(bgr)
+            plt.subplot(212)
+            plt.imshow(4*labels1+labels2,cmap='gist_rainbow')
+            plt.show()
         img_size = l.shape
         bb = bb.ravel()
         a = a.ravel()
@@ -178,82 +163,118 @@ for f in fs:
         lbp_l1 = lbp_l1.ravel()
         lbp_l2 = lbp_l2.ravel()
         lbp_l3 = lbp_l3.ravel()
+        lap_l1 = lap_l1.ravel()
+        lap_l2 = lap_l2.ravel()
+        lap_l3 = lap_l3.ravel()
         sd_a1 = sd_a1.ravel()
         sd_a2 = sd_a2.ravel()
         sd_a3 = sd_a3.ravel()
         lbp_a1 = lbp_a1.ravel()
         lbp_a2 = lbp_a2.ravel()
         lbp_a3 = lbp_a3.ravel()
+        lap_a1 = lap_a1.ravel()
+        lap_a2 = lap_a2.ravel()
+        lap_a3 = lap_a3.ravel()
         sd_b1 = sd_b1.ravel()
         sd_b2 = sd_b2.ravel()
         sd_b3 = sd_b3.ravel()
         lbp_b1 = lbp_b1.ravel()
         lbp_b2 = lbp_b2.ravel()
         lbp_b3 = lbp_b3.ravel()
+        lap_b1 = lap_b1.ravel()
+        lap_b2 = lap_b2.ravel()
+        lap_b3 = lap_b3.ravel()
         sd_h1 = sd_h1.ravel()
         sd_h2 = sd_h2.ravel()
         sd_h3 = sd_h3.ravel()
         lbp_h1 = lbp_h1.ravel()
         lbp_h2 = lbp_h2.ravel()
-        lbp_h3 = lbp_a3.ravel()
+        lbp_h3 = lbp_h3.ravel()
+        lap_h1 = lap_h1.ravel()
+        lap_h2 = lap_h2.ravel()
+        lap_h3 = lap_h3.ravel()
         sd_s1 = sd_s1.ravel()
         sd_s2 = sd_s2.ravel()
         sd_s3 = sd_s3.ravel()
         lbp_s1 = lbp_s1.ravel()
         lbp_s2 = lbp_s2.ravel()
         lbp_s3 = lbp_s3.ravel()
+        lap_s1 = lap_s1.ravel()
+        lap_s2 = lap_s2.ravel()
+        lap_s3 = lap_s3.ravel()
         sd_v1 = sd_v1.ravel()
         sd_v2 = sd_v2.ravel()
         sd_v3 = sd_v3.ravel()
         lbp_v1 = lbp_v1.ravel()
         lbp_v2 = lbp_v2.ravel()
         lbp_v3 = lbp_v3.ravel()
-        feat = np.vstack((l.T,a.T,bb.T,h.T,s.T,v.T,sd_l1.T,sd_l2.T,sd_l3.T,lbp_l1.T,lbp_l2.T,lbp_l3.T,sd_a1.T,sd_a2.T,sd_a3.T,lbp_a1.T,lbp_a2.T,lbp_a3.T,sd_b1.T,sd_b2.T,sd_b3.T,lbp_b1.T,lbp_b2.T,lbp_b3.T,sd_h1.T,sd_h2.T,sd_h3.T,lbp_h1.T,lbp_h2.T,lbp_h3.T,sd_s1.T,sd_s2.T,sd_s3.T,lbp_s1.T,lbp_s2.T,lbp_s3.T,sd_v1.T,sd_v2.T,sd_v3.T,lbp_v1.T,lbp_v2.T,lbp_v3.T)).T
+        lap_v1 = lap_v1.ravel()
+        lap_v2 = lap_v2.ravel()
+        lap_v3 = lap_v3.ravel()
+        feat = np.vstack((l.T,a.T,bb.T,h.T,s.T,v.T,
+                          sd_l1.T,sd_l2.T,sd_l3.T,
+                          lbp_l1.T,lbp_l2.T,lbp_l3.T,
+                          lap_l1.T,lap_l2.T,lap_l3.T,
+                          sd_a1.T,sd_a2.T,sd_a3.T,
+                          lbp_a1.T,lbp_a2.T,lbp_a3.T,
+                          lap_a1.T,lap_a2.T,lap_a3.T,
+                          sd_b1.T,sd_b2.T,sd_b3.T,
+                          lbp_b1.T,lbp_b2.T,lbp_b3.T,
+                          lap_b1.T,lap_b2.T,lap_b3.T,
+                          sd_h1.T,sd_h2.T,sd_h3.T,
+                          lbp_h1.T,lbp_h2.T,lbp_h3.T,
+                          lap_h1.T,lap_h2.T,lap_h3.T,
+                          sd_s1.T,sd_s2.T,sd_s3.T,
+                          lbp_s1.T,lbp_s2.T,lbp_s3.T,
+                          lap_s1.T,lap_s2.T,lap_s3.T,
+                          sd_v1.T,sd_v2.T,sd_v3.T,
+                          lbp_v1.T,lbp_v2.T,lbp_v3.T,
+                          lap_v1.T,lap_v2.T,lap_v3.T)).T
         #labels = np.sum(np.vstack((soil.ravel().T, residue.ravel().T*2, shadow.ravel().T*3, vegetation.ravel().T*4)).T,axis=1)
-        labels = labels.ravel()        
-        if n_img<7:
-            train_imgs.append({'bgr':bgr,'feats':feat,'labels1':labels1,'labels2':labels2})
-        else:
-            test_imgs.append({'bgr':bgr,'feats':feat,'labels1':labels1,'labels2':labels2})
+        labels1 = labels1.ravel()        
+        labels2 = labels2.ravel() 
+        #8-class
+        labels3 = 4*labels1+labels2   
+        
+        imgs.append({'bgr':bgr,'feats':feat,'labels1':labels1,'labels2':labels2,'labels3':labels3})
         n_img=n_img+1
+n_feat = feat.shape[1]
 
 
-# In[8]:
+# In[ ]:
 
 
-train_feats = []
-train_labels1 = []
-train_labels2 = []
-for sample in train_imgs:
-    train_feats.append(sample['feats'])
-    train_labels1.append(sample['labels1'])
-    train_labels2.append(sample['labels2'])
+feats = []
+labels1 = []
+labels2 = []
+labels3 = []
+for sample in imgs:
+    feats.append(sample['feats'])
+    labels1.append(sample['labels1'])
+    labels2.append(sample['labels2'])
+    labels3.append(sample['labels3'])
 
 
-# In[9]:
+# In[ ]:
 
 
-test_feats = []
-test_labels1 = []
-test_labels2 = []
-for sample in test_imgs:
-    test_feats.append(sample['feats'])
-    test_labels1.append(sample['labels1'])
-    test_labels1.append(sample['labels2'])
+feats = np.array(feats).reshape((-1,n_feat)).astype(np.float32)
+labels1 = np.array(labels1).reshape((-1,1)).astype(np.int32).ravel()
+labels2 = np.array(labels2).reshape((-1,1)).astype(np.int32).ravel()
+labels3 = np.array(labels3).reshape((-1,1)).astype(np.int32).ravel()
+scaler = StandardScaler()
+feats = scaler.fit_transform(feats)
 
 
-# In[10]:
+# In[ ]:
 
 
-train_feats = np.array(train_feats).reshape((-1,n_feat)).astype(np.float32)
-train_labels1 = np.array(train_labels1).reshape((-1,1)).astype(np.int32).ravel()
-train_labels2 = np.array(train_labels2).reshape((-1,1)).astype(np.int32).ravel()
-test_feats = np.array(test_feats).reshape((-1,n_feat)).astype(np.float32)
-test_labels1 = np.array(test_labels1).reshape((-1,1)).astype(np.int32).ravel()
-test_labels2 = np.array(test_labels2).reshape((-1,1)).astype(np.int32).ravel()
+train_feats1, test_feats1, train_labels1, test_labels1 = train_test_split(feats, labels1, test_size=0.2, random_state=42)
+train_feats2, test_feats2, train_labels2, test_labels2 = train_test_split(feats, labels2, test_size=0.2, random_state=42)
+train_feats3, test_feats3, train_labels3, test_labels3 = train_test_split(feats, labels3, test_size=0.2, random_state=42)
 
 
-# In[11]:
+# In[ ]:
 
 
 def cornfusion(obs,pred,nclass):
@@ -265,104 +286,219 @@ def cornfusion(obs,pred,nclass):
     return M
 
 
-# In[45]:
+# In[ ]:
 
 
-scaler = StandardScaler()
-train_feats0 = scaler.fit_transform(train_feats)
+train_feats = train_feats1#[:,mask1]
+test_feats = test_feats1#[:,mask1]
 
 
 # In[ ]:
 
 
-#need feature selection her
-svc = svm.SVC()
-clf_svc1 = RFECV(svc,step=1, cv=5,n_jobs=-1)
-clf_svc1.fit(train_feats0, train_labels1)
-r1 = clf_svc1.ranking_
-mask1 = r1==1
+parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat/4), n_components1*2),
+                                                                     (int(n_feat/2), n_components1*2),
+                                                                     (n_feat, n_components1*2),
+                                                                     (n_feat*2, n_components1*2),
+                                                                     (n_feat*4, n_components1*2),
+                                                                     (int(n_feat/4), n_components1),
+                                                                     (int(n_feat/2), n_components1),
+                                                                     (n_feat, n_components1),
+                                                                     (n_feat*2, n_components1),
+                                                                     (n_feat*4, n_components1))}
+mlp = MLPClassifier(max_iter=100000,random_state=42)
+
+clf_mlp1 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+clf_mlp1.fit(train_feats, train_labels1)
+
+clf_mlp1.best_params_
+
+model_mlp1 = clf_mlp1.best_estimator_
 
 
 # In[ ]:
 
 
-train_feats = train_feats0[,mask1]
+pred_mlp1 = clf_mlp1.predict(test_feats)
 
 
 # In[ ]:
 
 
-parameters = {'C':np.logspace(-3,3,7), 'gamma':np.logspace(-4,0,5),'decision_function_shape':('ovo', 'ovr')}
-svc = svm.SVC()
-clf_svc1 = GridSearchCV(svc, parameters,n_jobs=-1,cv=5)
-clf_svc1.fit(train_feats, train_labels1)
-clf_svc1.best_params_
-model_svc1 = clf_svc1.best_estimator_
-test_feats = scaler.transform(test_feats)
-pred_svc1 = model_svc.predict(test_feats)
+import pickle
+filename = 'finalized_model1.pk.sav'
+pickle.dump(model_mlp1, open(filename, 'wb'))
 
 
 # In[ ]:
 
 
-M_svc1 = cornfusion(test_labels1,pred_svc1,n_components)
-M_svc1 = M_svc1/np.sum(M_svc1,axis=1).reshape((-1,1))
+M_mlp1 = cornfusion(test_labels1,pred_mlp1,n_components1)
+M_mlp1 = M_mlp1/np.sum(np.sum(M_mlp1))
+recall1 = np.diag(M_mlp1)/np.sum(M_mlp1,axis=1)
+precis1 = np.diag(M_mlp1)/np.sum(M_mlp1,axis=0)
+M_mlp1
 
 
 # In[ ]:
 
 
-#need feature selection her
-svc = svm.SVC()
-clf_svc2 = RFECV(svc,step=1, cv=5,n_jobs=-1)
-clf_svc2.fit(train_feats, train_labels2)
-r2 = clf_svc2.ranking_
-mask2 = r2==1
+train_feats = train_feats2#[:,mask2]
+test_feats = test_feats2#[:,mask2]
 
 
 # In[ ]:
 
 
-train_feats = train_feats0[,mask2]
+parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat/4), n_components2*2),
+                                                                     (int(n_feat/2), n_components2*2),
+                                                                     (n_feat, n_components2*2),
+                                                                     (n_feat*2, n_components2*2),
+                                                                     (n_feat*4, n_components2*2),
+                                                                     (int(n_feat/4), n_components2),
+                                                                     (int(n_feat/2), n_components2),
+                                                                     (n_feat, n_components2),
+                                                                     (n_feat*2, n_components2),
+                                                                     (n_feat*4, n_components2))}
+mlp = MLPClassifier(max_iter=100000,random_state=42)
+
+clf_mlp2 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+clf_mlp2.fit(train_feats, train_labels2)
+
+model_mlp2 = clf_mlp2.best_estimator_
+pred_mlp2 = clf_mlp2.predict(test_feats)
 
 
 # In[ ]:
 
 
-parameters = {'C':np.logspace(-3,3,7), 'gamma':np.logspace(-4,0,5),'decision_function_shape':('ovo', 'ovr')}
-svc = svm.SVC()
-clf_svc2 = GridSearchCV(svc, parameters,n_jobs=-1,cv=5)
-clf_svc2.fit(train_feats, train_labels2)
-clf_svc2.best_params_
-model_svc2 = clf_svc2.best_estimator_
-test_feats = scaler.transform(test_feats)
-pred_svc2 = model_svc.predict(test_feats)
+M_mlp2 = cornfusion(test_labels2,pred_mlp2,n_components2)
+M_mlp2 = M_mlp2/np.sum(np.sum(M_mlp2))
+recall2 = np.diag(M_mlp2)/np.sum(M_mlp2,axis=1)
+precis2 = np.diag(M_mlp2)/np.sum(M_mlp2,axis=0)
+M_mlp2
 
 
 # In[ ]:
 
 
-M_svc2 = cornfusion(test_labels2,pred_svc2,n_components)
-M_svc2 = M_svc2/np.sum(M_svc2,axis=1).reshape((-1,1))
+precis2
 
 
 # In[ ]:
 
 
-M_svc1_df = {}
-M_svc1_df['shade'] = M_svc1[:,0]
-M_svc1_df['sun'] = M_svc1[:,1]
-M_svc1_df = DataFrame(M_svc1_df)
-M_svc1_df.to_csv(os.path.join(p2,'M1.csv'))
+filename = 'finalized_model2.pk.sav'
+pickle.dump(model_mlp2, open(filename, 'wb'))
 
 
 # In[ ]:
 
 
-M_svc2_df = {}
-M_svc2_df['soil'] = M_svc2[:,0]
-M_svc2_df['res'] = M_svc2[:,1]
-M_svc2_df['can'] = M_svc2[:,1]
-M_svc2_df = DataFrame(M_svc2_df)
-M_svc2_df.to_csv(os.path.join(p2,'M2.csv'))
+train_feats = train_feats3#[:,mask3]
+test_feats = test_feats3#[:,mask3]
 
+
+# In[ ]:
+
+
+parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat/4), n_components3*2),
+                                                                     (int(n_feat/2), n_components3*2),
+                                                                     (n_feat, n_components3*2),
+                                                                     (n_feat*2, n_components3*2),
+                                                                     (n_feat*4, n_components3*2),
+                                                                     (int(n_feat/4), n_components3),
+                                                                     (int(n_feat/2), n_components3),
+                                                                     (n_feat, n_components3),
+                                                                     (n_feat*2, n_components3),
+                                                                     (n_feat*4, n_components3))}#svc = SGDClassifier(max_iter=100000)
+mlp = MLPClassifier(max_iter=100000,random_state=42)
+clf_mlp3 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+clf_mlp3.fit(train_feats, train_labels3)
+
+model_mlp3 = clf_mlp3.best_estimator_
+pred_mlp3 = clf_mlp3.predict(test_feats)
+
+
+# In[ ]:
+
+
+M_mlp3 = cornfusion(test_labels3,pred_mlp3,n_components3)
+M_mlp3 = M_mlp3/np.sum(np.sum(M_mlp3))
+recall3 = np.diag(M_mlp3)/np.sum(M_mlp3,axis=1)
+precis3 = np.diag(M_mlp3)/np.sum(M_mlp3,axis=0)
+
+
+M_mlp4 = cornfusion(test_labels3,4*pred_mlp1+pred_mlp2,n_components3)
+M_mlp4 = M_mlp4/np.sum(np.sum(M_mlp4))
+recall4 = np.diag(M_mlp4)/np.sum(M_mlp4,axis=1)
+precis4 = np.diag(M_mlp4)/np.sum(M_mlp4,axis=0)
+M_mlp4
+
+f3=(recall3*precis3/(recall3+precis3)*2)
+f3_weighted=np.sum(f3*np.sum(M_mlp3, axis=1))
+
+f4=(recall4*precis4/(recall4+precis4)*2)
+f4_weighted=np.sum(f4*np.sum(M_mlp4, axis=1))
+print(f3)
+print(f3_weighted)
+print(f4)
+print(f4_weighted)
+
+
+# In[ ]:
+
+
+filename = 'finalized_model3.pk.sav'
+pickle.dump(model_mlp3, open(filename, 'wb'))
+
+
+# In[ ]:
+
+
+M_mlp1_df = {}
+M_mlp1_df['sun'] = M_mlp1[:,0]
+M_mlp1_df['shade'] = M_mlp1[:,1]
+M_mlp1_df = DataFrame(M_mlp1_df)
+M_mlp1_df.to_csv(os.path.join(p2,'M1.csv'))
+
+M_mlp2_df = {}
+M_mlp2_df['soil'] = M_mlp2[:,0]
+M_mlp2_df['res'] = M_mlp2[:,1]
+M_mlp2_df['can'] = M_mlp2[:,2]
+M_mlp2_df['snow'] = M_mlp2[:,3]
+M_mlp2_df = DataFrame(M_mlp2_df)
+M_mlp2_df.to_csv(os.path.join(p2,'M2.csv'))
+
+M_mlp3_df = {}
+M_mlp3_df['sun_soil'] = M_mlp3[:,0]
+M_mlp3_df['sun_res'] = M_mlp3[:,1]
+M_mlp3_df['sun_can'] = M_mlp3[:,2]
+M_mlp3_df['sun_snow'] = M_mlp3[:,3]
+M_mlp3_df['shade_soil'] = M_mlp3[:,4]
+M_mlp3_df['shade_res'] = M_mlp3[:,5]
+M_mlp3_df['shade_can'] = M_mlp3[:,6]
+M_mlp3_df['shade_snow'] = M_mlp3[:,7]
+M_mlp3_df = DataFrame(M_mlp3_df)
+M_mlp3_df.to_csv(os.path.join(p2,'M3.csv'))
+
+M_mlp4_df = {}
+M_mlp4_df['sun_soil'] = M_mlp4[:,0]
+M_mlp4_df['sun_res'] = M_mlp4[:,1]
+M_mlp4_df['sun_can'] = M_mlp4[:,2]
+M_mlp4_df['sun_snow'] = M_mlp4[:,3]
+M_mlp4_df['shade_soil'] = M_mlp4[:,4]
+M_mlp4_df['shade_res'] = M_mlp4[:,5]
+M_mlp4_df['shade_can'] = M_mlp4[:,6]
+M_mlp4_df['shade_snow'] = M_mlp4[:,7]
+M_mlp4_df = DataFrame(M_mlp4_df)
+M_mlp4_df.to_csv(os.path.join(p2,'M4.csv'))
+
+p1_df = DataFrame(clf_mlp1.best_params_)
+p1_df.to_csv(os.path.join(p2,'params1.csv'))
+
+p2_df = DataFrame(clf_mlp2.best_params_)
+p2_df.to_csv(os.path.join(p2,'params2.csv'))
+
+p3_df = DataFrame(clf_mlp3.best_params_)
+p3_df.to_csv(os.path.join(p2,'params3.csv'))
