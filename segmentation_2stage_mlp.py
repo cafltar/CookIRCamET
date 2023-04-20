@@ -21,9 +21,6 @@ from skimage.feature import hessian_matrix_det as Hessian
 from skimage.feature import local_binary_pattern as LBP
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
-from sklearn.feature_selection import RFECV
-from sklearn import svm
-from sklearn.linear_model import SGDClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 import pickle
@@ -294,7 +291,7 @@ labels1 = np.array(labels1).reshape((-1,1)).astype(np.int32).ravel()
 labels2 = np.array(labels2).reshape((-1,1)).astype(np.int32).ravel()
 labels3 = np.array(labels3).reshape((-1,1)).astype(np.int32).ravel()
 scaler = StandardScaler()
-filename = os.path.join(p3,'scaler.pk.sav')
+filename = os.path.join(p3,'scaler_mlp.pk.sav')
 feats = scaler.fit_transform(feats)
 pickle.dump(scaler, open(filename, 'wb'))
 
@@ -364,7 +361,7 @@ pred_mlp1 = clf_mlp1.predict(test_feats)
 # In[ ]:
 
 
-filename = os.path.join(p3,'finalized_model1.pk.sav')
+filename = os.path.join(p3,'finalized_model1_mlp.pk.sav')
 pickle.dump(model_mlp1, open(filename, 'wb'))
 
 
@@ -426,7 +423,7 @@ precis2
 # In[ ]:
 
 
-filename = os.path.join(p3,'finalized_model2.pk.sav')
+filename = os.path.join(p3,'finalized_model2_mlp.pk.sav')
 pickle.dump(model_mlp2, open(filename, 'wb'))
 
 
@@ -487,7 +484,7 @@ print(f4_weighted)
 # In[ ]:
 
 
-filename = os.path.join(p3,'finalized_model3.pk.sav')
+filename = os.path.join(p3,'finalized_model3_mlp.pk.sav')
 pickle.dump(model_mlp3, open(filename, 'wb'))
 
 
@@ -498,7 +495,7 @@ M_mlp1_df = {}
 M_mlp1_df['sun'] = M_mlp1[:,0]
 M_mlp1_df['shade'] = M_mlp1[:,1]
 M_mlp1_df = DataFrame(M_mlp1_df)
-M_mlp1_df.to_csv(os.path.join(p3,'M1.csv'))
+M_mlp1_df.to_csv(os.path.join(p3,'M1_mlp.csv'))
 
 M_mlp2_df = {}
 M_mlp2_df['soil'] = M_mlp2[:,0]
@@ -506,7 +503,7 @@ M_mlp2_df['res'] = M_mlp2[:,1]
 M_mlp2_df['can'] = M_mlp2[:,2]
 M_mlp2_df['snow'] = M_mlp2[:,3]
 M_mlp2_df = DataFrame(M_mlp2_df)
-M_mlp2_df.to_csv(os.path.join(p3,'M2.csv'))
+M_mlp2_df.to_csv(os.path.join(p3,'M2_mlp.csv'))
 
 M_mlp3_df = {}
 M_mlp3_df['sun_soil'] = M_mlp3[:,0]
@@ -518,7 +515,7 @@ M_mlp3_df['shade_res'] = M_mlp3[:,5]
 M_mlp3_df['shade_can'] = M_mlp3[:,6]
 M_mlp3_df['shade_snow'] = M_mlp3[:,7]
 M_mlp3_df = DataFrame(M_mlp3_df)
-M_mlp3_df.to_csv(os.path.join(p3,'M3.csv'))
+M_mlp3_df.to_csv(os.path.join(p3,'M3_mlp.csv'))
 
 M_mlp4_df = {}
 M_mlp4_df['sun_soil'] = M_mlp4[:,0]
@@ -530,16 +527,16 @@ M_mlp4_df['shade_res'] = M_mlp4[:,5]
 M_mlp4_df['shade_can'] = M_mlp4[:,6]
 M_mlp4_df['shade_snow'] = M_mlp4[:,7]
 M_mlp4_df = DataFrame(M_mlp4_df)
-M_mlp4_df.to_csv(os.path.join(p3,'M4.csv'))
+M_mlp4_df.to_csv(os.path.join(p3,'M4_mlp.csv'))
 
 p1_df = DataFrame(clf_mlp1.best_params_)
-p1_df.to_csv(os.path.join(p3,'params1.csv'))
+p1_df.to_csv(os.path.join(p3,'params1_mlp.csv'))
 
 p2_df = DataFrame(clf_mlp2.best_params_)
-p2_df.to_csv(os.path.join(p3,'params2.csv'))
+p2_df.to_csv(os.path.join(p3,'params2_mlp.csv'))
 
 p3_df = DataFrame(clf_mlp3.best_params_)
-p3_df.to_csv(os.path.join(p3,'params3.csv'))
+p3_df.to_csv(os.path.join(p3,'params3_mlp.csv'))
 
 
 # In[ ]:
