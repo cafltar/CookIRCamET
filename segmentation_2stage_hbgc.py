@@ -14,16 +14,21 @@ import pysolar
 import os
 import numpy as np
 from random import shuffle
-from matplotlib import pyplot as plt
-import matplotlib as mpl
 from pandas import read_csv, read_excel, DataFrame
 from skimage.feature import hessian_matrix_det as Hessian
 from skimage.feature import local_binary_pattern as LBP
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import GridSearchCV
-from sklearn.feature_selection import RFECV
+from sklearn.experimental import enable_halving_search_cv # noqa
+from sklearn.model_selection import HalvingGridSearchCV
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler
+
+import joblib
+import dask_jobqueue as jq
+from dask.distributed import Client,wait
+from dask import delayed
+import dask.array as da 
+
 import pickle
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -39,19 +44,22 @@ n_components1 = 2
 n_components2 = 4
 n_components3 = 8
 
-
-# In[2]:
-
-
-cmap1 = mpl.colors.ListedColormap(['y', 'b'])
-norm1 = mpl.colors.BoundaryNorm([0,1], cmap1.N)
-
-cmap2 = mpl.colors.ListedColormap(['r', 'b', 'g','w'])
-norm2 = mpl.colors.BoundaryNorm([0,1,2,3,4], cmap2.N)
-
-
 # In[3]:
+#partition='mem'
+#num_processes = 32 
+#num_threads_per_processes = 2
+#mem = 1494
+#n_cores_per_job = num_processes*num_threads_per_processes
 
+#clust = jq.SLURMCluster(queue=partition,
+#                        processes=num_processes,
+#                        death_timeout=900,
+#                        cores=n_cores_per_job,
+#                        memory=str(mem)+'GB',
+#                        walltime='7-00:00:00')
+#clust.scale(2)
+#cl = Client(clust)
+#cl
 
 def localSD(mat, n):    
     mat=np.float32(mat)
@@ -92,12 +100,6 @@ for di,do in zip([p1,p11],[p2,p22]):
                     labels = (True & labels)
                 if labels:         
                     print(f)
-                    plt.imshow(bgr)
-                    plt.show()
-                    plt.imshow(labels1, cmap=cmap1, norm=norm1, interpolation='none')
-                    plt.show()
-                    plt.imshow(labels2, cmap=cmap2, norm=norm2, interpolation='none')
-                    plt.show()
                     lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
                     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
                     img = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
@@ -267,10 +269,10 @@ for di,do in zip([p1,p11],[p2,p22]):
                     if not np.any(np.isnan(feat)):
                         imgs.append({'bgr':bgr,'feats':feat,'labels1':labels1,'labels2':labels2,'labels3':labels3})
                         n_img=n_img+1
+
+                    del lab, hsv, img ,l , a, bb, h, s, v, sd_l1,sd_l2,sd_l3,lbp_l1,lbp_l2,lbp_l3,sd_a1,sd_a2,sd_a3,lbp_a1,lbp_a2,lbp_a3, sd_b1,sd_b2,sd_b3,lbp_b1,lbp_b2,lbp_b3, sd_h1,sd_h2,sd_h3,lbp_h1,lbp_h2,lbp_h3,sd_s1,sd_s2,sd_s3,lbp_s1,lbp_s2,lbp_s3, sd_v1,sd_v2,sd_v3,lbp_v1,lbp_v2,lbp_v3, lap_l1,lap_l2,lap_l3,lap_a1,lap_a2, lap_a3, lap_b1, lap_b2,lap_b3,lap_h1,lap_h2,lap_h3,lap_s1,lap_s2,lap_s3,lap_v1,lap_v2,lap_v3
+
 n_feat = feat.shape[1]
-
-
-# In[ ]:
 
 
 feats = []
@@ -293,6 +295,7 @@ labels2 = np.array(labels2).reshape((-1,1)).astype(np.int32).ravel()
 labels3 = np.array(labels3).reshape((-1,1)).astype(np.int32).ravel()
 scaler = StandardScaler()
 filename = os.path.join(p3,'scaler.pk.sav')
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 feats = scaler.fit_transform(feats)
 pickle.dump(scaler, open(filename, 'wb'))
 
@@ -327,10 +330,12 @@ test_feats = test_feats3#[:,mask3]
 
 parameters = {'max_leaf_nodes':(10,31,100),
               'min_samples_leaf':(10,20,40),
-              'max_bins':(127,255,511)}
+              'max_bins':(63,127,255)}
 
 hgb = HistGradientBoostingClassifier(max_iter=100000,random_state=42)
-clf_hgb3 = GridSearchCV(hgb, parameters,n_jobs=-1,cv=5)
+clf_hgb3 = HalvingGridSearchCV(hgb, parameters,n_jobs=-1,cv=5)
+
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 clf_hgb3.fit(train_feats, train_labels3)
 
 model_hgb3 = clf_hgb3.best_estimator_
@@ -346,46 +351,16 @@ recall3 = np.diag(M_hgb3)/np.sum(M_hgb3,axis=1)
 precis3 = np.diag(M_hgb3)/np.sum(M_hgb3,axis=0)
 
 
-M_hgb4 = cornfusion(test_labels3,4*pred_hgb1+pred_hgb2,n_components3)
-M_hgb4 = M_hgb4/np.sum(np.sum(M_hgb4))
-recall4 = np.diag(M_hgb4)/np.sum(M_hgb4,axis=1)
-precis4 = np.diag(M_hgb4)/np.sum(M_hgb4,axis=0)
-M_hgb4
-
 f3=(recall3*precis3/(recall3+precis3)*2)
 f3_weighted=np.sum(f3*np.sum(M_hgb3, axis=1))
 
-f4=(recall4*precis4/(recall4+precis4)*2)
-f4_weighted=np.sum(f4*np.sum(M_hgb4, axis=1))
 print(f3)
 print(f3_weighted)
-print(f4)
-print(f4_weighted)
-
-
-# In[ ]:
 
 
 filename = os.path.join(p3,'finalized_model3_hgb.pk.sav')
 pickle.dump(model_hgb3, open(filename, 'wb'))
 
-
-# In[ ]:
-
-
-M_hgb1_df = {}
-M_hgb1_df['sun'] = M_hgb1[:,0]
-M_hgb1_df['shade'] = M_hgb1[:,1]
-M_hgb1_df = DataFrame(M_hgb1_df)
-M_hgb1_df.to_csv(os.path.join(p3,'M1_hgb.csv'))
-
-M_hgb2_df = {}
-M_hgb2_df['soil'] = M_hgb2[:,0]
-M_hgb2_df['res'] = M_hgb2[:,1]
-M_hgb2_df['can'] = M_hgb2[:,2]
-M_hgb2_df['snow'] = M_hgb2[:,3]
-M_hgb2_df = DataFrame(M_hgb2_df)
-M_hgb2_df.to_csv(os.path.join(p3,'M2_hgb.csv'))
 
 M_hgb3_df = {}
 M_hgb3_df['sun_soil'] = M_hgb3[:,0]
@@ -398,24 +373,6 @@ M_hgb3_df['shade_can'] = M_hgb3[:,6]
 M_hgb3_df['shade_snow'] = M_hgb3[:,7]
 M_hgb3_df = DataFrame(M_hgb3_df)
 M_hgb3_df.to_csv(os.path.join(p3,'M3_hgb.csv'))
-
-M_hgb4_df = {}
-M_hgb4_df['sun_soil'] = M_hgb4[:,0]
-M_hgb4_df['sun_res'] = M_hgb4[:,1]
-M_hgb4_df['sun_can'] = M_hgb4[:,2]
-M_hgb4_df['sun_snow'] = M_hgb4[:,3]
-M_hgb4_df['shade_soil'] = M_hgb4[:,4]
-M_hgb4_df['shade_res'] = M_hgb4[:,5]
-M_hgb4_df['shade_can'] = M_hgb4[:,6]
-M_hgb4_df['shade_snow'] = M_hgb4[:,7]
-M_hgb4_df = DataFrame(M_hgb4_df)
-M_hgb4_df.to_csv(os.path.join(p3,'M4_hgb.csv'))
-
-p1_df = DataFrame(clf_hgb1.best_params_)
-p1_df.to_csv(os.path.join(p3,'params1_hgb.csv'))
-
-p2_df = DataFrame(clf_hgb2.best_params_)
-p2_df.to_csv(os.path.join(p3,'params2_hgb.csv'))
 
 p3_df = DataFrame(clf_hgb3.best_params_)
 p3_df.to_csv(os.path.join(p3,'params3_hgb.csv'))

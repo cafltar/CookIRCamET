@@ -27,6 +27,13 @@ import pickle
 import logging
 logging.basicConfig(level=logging.INFO)
 
+import joblib
+import dask_jobqueue as jq
+from dask.distributed import Client,wait
+from dask import delayed
+import dask.array as da 
+
+
 p0 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2023')
 p1 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023','RGB')
 p2 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023','Labels')
@@ -40,14 +47,21 @@ n_components3 = 8
 
 
 # In[ ]:
-
-
-cmap1 = mpl.colors.ListedColormap(['y', 'b'])
-norm1 = mpl.colors.BoundaryNorm([0,1], cmap1.N)
-
-cmap2 = mpl.colors.ListedColormap(['r', 'b', 'g','w'])
-norm2 = mpl.colors.BoundaryNorm([0,1,2,3,4], cmap2.N)
-
+# In[3]:
+#partition='mem'
+#num_processes = 32 
+#num_threads_per_processes = 2
+#mem = 1494
+#n_cores_per_job = num_processes*num_threads_per_processes
+#clust = jq.SLURMCluster(queue=partition,
+#                        processes=num_processes,
+#                        death_timeout=900,
+#                        cores=n_cores_per_job,
+#                        memory=str(mem)+'GB',
+#                        walltime='7-00:00:00')
+#clust.adapt(maximum=16)
+#cl = Client(clust)
+#cl
 
 # In[ ]:
 
@@ -91,12 +105,6 @@ for di,do in zip([p1,p11],[p2,p22]):
                     labels = (True & labels)
                 if labels:         
                     print(f)
-                    plt.imshow(bgr)
-                    plt.show()
-                    plt.imshow(labels1, cmap=cmap1, norm=norm1, interpolation='none')
-                    plt.show()
-                    plt.imshow(labels2, cmap=cmap2, norm=norm2, interpolation='none')
-                    plt.show()
                     lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
                     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
                     img = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
@@ -266,6 +274,9 @@ for di,do in zip([p1,p11],[p2,p22]):
                     if not np.any(np.isnan(feat)):
                         imgs.append({'bgr':bgr,'feats':feat,'labels1':labels1,'labels2':labels2,'labels3':labels3})
                         n_img=n_img+1
+
+                    del lab, hsv, img ,l , a, bb, h, s, v, sd_l1,sd_l2,sd_l3,lbp_l1,lbp_l2,lbp_l3,sd_a1,sd_a2,sd_a3,lbp_a1,lbp_a2,lbp_a3, sd_b1,sd_b2,sd_b3,lbp_b1,lbp_b2,lbp_b3, sd_h1,sd_h2,sd_h3,lbp_h1,lbp_h2,lbp_h3,sd_s1,sd_s2,sd_s3,lbp_s1,lbp_s2,lbp_s3, sd_v1,sd_v2,sd_v3,lbp_v1,lbp_v2,lbp_v3, lap_l1,lap_l2,lap_l3,lap_a1,lap_a2, lap_a3, lap_b1, lap_b2,lap_b3,lap_h1,lap_h2,lap_h3,lap_s1,lap_s2,lap_s3,lap_v1,lap_v2,lap_v3
+
 n_feat = feat.shape[1]
 
 
@@ -286,12 +297,14 @@ for sample in imgs:
 # In[ ]:
 
 
+
 feats = np.array(feats).reshape((-1,n_feat)).astype(np.float32)
 labels1 = np.array(labels1).reshape((-1,1)).astype(np.int32).ravel()
 labels2 = np.array(labels2).reshape((-1,1)).astype(np.int32).ravel()
 labels3 = np.array(labels3).reshape((-1,1)).astype(np.int32).ravel()
 scaler = StandardScaler()
 filename = os.path.join(p3,'scaler_mlp.pk.sav')
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 feats = scaler.fit_transform(feats)
 pickle.dump(scaler, open(filename, 'wb'))
 
@@ -345,6 +358,7 @@ parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat
 mlp = MLPClassifier(max_iter=100000,random_state=42)
 
 clf_mlp1 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 clf_mlp1.fit(train_feats, train_labels1)
 
 clf_mlp1.best_params_
@@ -398,6 +412,7 @@ parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat
 mlp = MLPClassifier(max_iter=100000,random_state=42)
 
 clf_mlp2 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 clf_mlp2.fit(train_feats, train_labels2)
 
 model_mlp2 = clf_mlp2.best_estimator_
@@ -449,6 +464,7 @@ parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat
                                                                      (n_feat*4, n_components3))}#svc = SGDClassifier(max_iter=100000)
 mlp = MLPClassifier(max_iter=100000,random_state=42)
 clf_mlp3 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 clf_mlp3.fit(train_feats, train_labels3)
 
 model_mlp3 = clf_mlp3.best_estimator_
