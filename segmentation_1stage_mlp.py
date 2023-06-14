@@ -282,13 +282,42 @@ pickle.dump(scaler, open(filename, 'wb'))
 
 train_feats3, test_feats3, train_labels3, test_labels3 = train_test_split(feats, labels3, test_size=0.2, random_state=42)
 
+train_feats = train_feats3#[:,mask3]
+test_feats = test_feats3#[:,mask3]
+
+layers = []
+
+for layer1 in range(1,11):
+    for layer2 in range(1,6):
+        layer = (layer1*n_feat, int(np.sqrt(n_feat*n_components3*layer1*layer2)), layer2*n_components3)
+        layers.append(layer)
+
+parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':layers}
+
+mlp = MLPClassifier(max_iter=100000,random_state=42)
+clf_mlp3 = HalvingGridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+
+clf_mlp3.fit(train_feats, train_labels3)
+
+model_mlp3 = clf_mlp3.best_estimator_
+pred_mlp3 = clf_mlp3.predict(test_feats)
+
 def cornfusion(obs,pred,nclass):
     M = np.zeros((nclass,nclass))
     for i in range(obs.shape[0]):
         o = obs[i]
         p = pred[i]
         M[o,p] = M[o,p]+1
-    return M
+    correct = sum(obs==pred)
+    total = len(pred)
+    M = M/np.sum(np.sum(M))
+    recall = np.diag(M)/np.sum(M,axis=1)
+    precis = np.diag(M)/np.sum(M,axis=0)
+
+    f1=(recall*precis/(recall+precis)*2)
+    f1_weighted=np.sum(f1*np.sum(M, axis=1))
+
+    return M, f1_weighted, correct/total
 
 train_feats = train_feats3#[:,mask3]
 test_feats = test_feats3#[:,mask3]
@@ -310,8 +339,7 @@ clf_mlp3.fit(train_feats, train_labels3)
 model_mlp3 = clf_mlp3.best_estimator_
 pred_mlp3 = clf_mlp3.predict(test_feats)
 
-M_mlp3 = cornfusion(test_labels3,pred_mlp3,n_components3)
-M_mlp3 = M_mlp3/np.sum(np.sum(M_mlp3))
+M_mlp3,f3,a3 = cornfusion(test_labels3,pred_mlp3,n_components3)
 
 plt.matshow(M_mlp3)
 plt.ylabel("Predicted")
@@ -319,14 +347,7 @@ plt.xlabel("Observed")
 plt.title("V1 Confusion Matrix")
 plt.savefig(os.path.join(p3,'m_v1.png'),dpi=300)
 
-recall3 = np.diag(M_mlp3)/np.sum(M_mlp3,axis=1)
-precis3 = np.diag(M_mlp3)/np.sum(M_mlp3,axis=0)
-
-f3=(recall3*precis3/(recall3+precis3)*2)
-f3_weighted=np.sum(f3*np.sum(M_mlp3, axis=1))
-
-print(f3)
-print(f3_weighted)
+print(f3,a3)
 
 filename = os.path.join(p3,'finalized_model3_mlp.pk.sav')
 pickle.dump(model_mlp3, open(filename, 'wb'))
