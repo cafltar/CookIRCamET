@@ -21,14 +21,18 @@ from skimage.feature import hessian_matrix_det as Hessian
 from skimage.feature import local_binary_pattern as LBP
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
-from sklearn.feature_selection import RFECV
-from sklearn import svm
-from sklearn.linear_model import SGDClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 import pickle
 import logging
 logging.basicConfig(level=logging.INFO)
+
+import joblib
+import dask_jobqueue as jq
+from dask.distributed import Client,wait
+from dask import delayed
+import dask.array as da 
+
 
 p0 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2023')
 p1 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023','RGB')
@@ -43,14 +47,21 @@ n_components3 = 8
 
 
 # In[ ]:
-
-
-cmap1 = mpl.colors.ListedColormap(['y', 'b'])
-norm1 = mpl.colors.BoundaryNorm([0,1], cmap1.N)
-
-cmap2 = mpl.colors.ListedColormap(['r', 'b', 'g','w'])
-norm2 = mpl.colors.BoundaryNorm([0,1,2,3,4], cmap2.N)
-
+# In[3]:
+#partition='mem'
+#num_processes = 32 
+#num_threads_per_processes = 2
+#mem = 1494
+#n_cores_per_job = num_processes*num_threads_per_processes
+#clust = jq.SLURMCluster(queue=partition,
+#                        processes=num_processes,
+#                        death_timeout=900,
+#                        cores=n_cores_per_job,
+#                        memory=str(mem)+'GB',
+#                        walltime='7-00:00:00')
+#clust.adapt(maximum=16)
+#cl = Client(clust)
+#cl
 
 # In[ ]:
 
@@ -94,12 +105,6 @@ for di,do in zip([p1,p11],[p2,p22]):
                     labels = (True & labels)
                 if labels:         
                     print(f)
-                    plt.imshow(bgr)
-                    plt.show()
-                    plt.imshow(labels1, cmap=cmap1, norm=norm1, interpolation='none')
-                    plt.show()
-                    plt.imshow(labels2, cmap=cmap2, norm=norm2, interpolation='none')
-                    plt.show()
                     lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
                     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
                     img = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
@@ -269,6 +274,9 @@ for di,do in zip([p1,p11],[p2,p22]):
                     if not np.any(np.isnan(feat)):
                         imgs.append({'bgr':bgr,'feats':feat,'labels1':labels1,'labels2':labels2,'labels3':labels3})
                         n_img=n_img+1
+
+                    del lab, hsv, img ,l , a, bb, h, s, v, sd_l1,sd_l2,sd_l3,lbp_l1,lbp_l2,lbp_l3,sd_a1,sd_a2,sd_a3,lbp_a1,lbp_a2,lbp_a3, sd_b1,sd_b2,sd_b3,lbp_b1,lbp_b2,lbp_b3, sd_h1,sd_h2,sd_h3,lbp_h1,lbp_h2,lbp_h3,sd_s1,sd_s2,sd_s3,lbp_s1,lbp_s2,lbp_s3, sd_v1,sd_v2,sd_v3,lbp_v1,lbp_v2,lbp_v3, lap_l1,lap_l2,lap_l3,lap_a1,lap_a2, lap_a3, lap_b1, lap_b2,lap_b3,lap_h1,lap_h2,lap_h3,lap_s1,lap_s2,lap_s3,lap_v1,lap_v2,lap_v3
+
 n_feat = feat.shape[1]
 
 
@@ -289,12 +297,14 @@ for sample in imgs:
 # In[ ]:
 
 
+
 feats = np.array(feats).reshape((-1,n_feat)).astype(np.float32)
 labels1 = np.array(labels1).reshape((-1,1)).astype(np.int32).ravel()
 labels2 = np.array(labels2).reshape((-1,1)).astype(np.int32).ravel()
 labels3 = np.array(labels3).reshape((-1,1)).astype(np.int32).ravel()
 scaler = StandardScaler()
-filename = os.path.join(p3,'scaler.pk.sav')
+filename = os.path.join(p3,'scaler_mlp.pk.sav')
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 feats = scaler.fit_transform(feats)
 pickle.dump(scaler, open(filename, 'wb'))
 
@@ -348,6 +358,7 @@ parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat
 mlp = MLPClassifier(max_iter=100000,random_state=42)
 
 clf_mlp1 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 clf_mlp1.fit(train_feats, train_labels1)
 
 clf_mlp1.best_params_
@@ -364,7 +375,7 @@ pred_mlp1 = clf_mlp1.predict(test_feats)
 # In[ ]:
 
 
-filename = os.path.join(p3,'finalized_model1.pk.sav')
+filename = os.path.join(p3,'finalized_model1_mlp.pk.sav')
 pickle.dump(model_mlp1, open(filename, 'wb'))
 
 
@@ -401,6 +412,7 @@ parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat
 mlp = MLPClassifier(max_iter=100000,random_state=42)
 
 clf_mlp2 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 clf_mlp2.fit(train_feats, train_labels2)
 
 model_mlp2 = clf_mlp2.best_estimator_
@@ -426,7 +438,7 @@ precis2
 # In[ ]:
 
 
-filename = os.path.join(p3,'finalized_model2.pk.sav')
+filename = os.path.join(p3,'finalized_model2_mlp.pk.sav')
 pickle.dump(model_mlp2, open(filename, 'wb'))
 
 
@@ -452,6 +464,7 @@ parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat
                                                                      (n_feat*4, n_components3))}#svc = SGDClassifier(max_iter=100000)
 mlp = MLPClassifier(max_iter=100000,random_state=42)
 clf_mlp3 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 clf_mlp3.fit(train_feats, train_labels3)
 
 model_mlp3 = clf_mlp3.best_estimator_
@@ -487,7 +500,7 @@ print(f4_weighted)
 # In[ ]:
 
 
-filename = os.path.join(p3,'finalized_model3.pk.sav')
+filename = os.path.join(p3,'finalized_model3_mlp.pk.sav')
 pickle.dump(model_mlp3, open(filename, 'wb'))
 
 
@@ -498,7 +511,7 @@ M_mlp1_df = {}
 M_mlp1_df['sun'] = M_mlp1[:,0]
 M_mlp1_df['shade'] = M_mlp1[:,1]
 M_mlp1_df = DataFrame(M_mlp1_df)
-M_mlp1_df.to_csv(os.path.join(p3,'M1.csv'))
+M_mlp1_df.to_csv(os.path.join(p3,'M1_mlp.csv'))
 
 M_mlp2_df = {}
 M_mlp2_df['soil'] = M_mlp2[:,0]
@@ -506,7 +519,7 @@ M_mlp2_df['res'] = M_mlp2[:,1]
 M_mlp2_df['can'] = M_mlp2[:,2]
 M_mlp2_df['snow'] = M_mlp2[:,3]
 M_mlp2_df = DataFrame(M_mlp2_df)
-M_mlp2_df.to_csv(os.path.join(p3,'M2.csv'))
+M_mlp2_df.to_csv(os.path.join(p3,'M2_mlp.csv'))
 
 M_mlp3_df = {}
 M_mlp3_df['sun_soil'] = M_mlp3[:,0]
@@ -518,7 +531,7 @@ M_mlp3_df['shade_res'] = M_mlp3[:,5]
 M_mlp3_df['shade_can'] = M_mlp3[:,6]
 M_mlp3_df['shade_snow'] = M_mlp3[:,7]
 M_mlp3_df = DataFrame(M_mlp3_df)
-M_mlp3_df.to_csv(os.path.join(p3,'M3.csv'))
+M_mlp3_df.to_csv(os.path.join(p3,'M3_mlp.csv'))
 
 M_mlp4_df = {}
 M_mlp4_df['sun_soil'] = M_mlp4[:,0]
@@ -530,16 +543,16 @@ M_mlp4_df['shade_res'] = M_mlp4[:,5]
 M_mlp4_df['shade_can'] = M_mlp4[:,6]
 M_mlp4_df['shade_snow'] = M_mlp4[:,7]
 M_mlp4_df = DataFrame(M_mlp4_df)
-M_mlp4_df.to_csv(os.path.join(p3,'M4.csv'))
+M_mlp4_df.to_csv(os.path.join(p3,'M4_mlp.csv'))
 
 p1_df = DataFrame(clf_mlp1.best_params_)
-p1_df.to_csv(os.path.join(p3,'params1.csv'))
+p1_df.to_csv(os.path.join(p3,'params1_mlp.csv'))
 
 p2_df = DataFrame(clf_mlp2.best_params_)
-p2_df.to_csv(os.path.join(p3,'params2.csv'))
+p2_df.to_csv(os.path.join(p3,'params2_mlp.csv'))
 
 p3_df = DataFrame(clf_mlp3.best_params_)
-p3_df.to_csv(os.path.join(p3,'params3.csv'))
+p3_df.to_csv(os.path.join(p3,'params3_mlp.csv'))
 
 
 # In[ ]:

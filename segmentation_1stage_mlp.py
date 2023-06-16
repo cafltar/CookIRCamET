@@ -20,40 +20,24 @@ from pandas import read_csv, read_excel, DataFrame
 from skimage.feature import hessian_matrix_det as Hessian
 from skimage.feature import local_binary_pattern as LBP
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import GridSearchCV
-from sklearn.feature_selection import RFECV
-from sklearn import svm
-from sklearn.linear_model import SGDClassifier
+from sklearn.experimental import enable_halving_search_cv # noqa
+from sklearn.model_selection import HalvingGridSearchCV
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 import pickle
 import logging
 logging.basicConfig(level=logging.INFO)
 
+
 p0 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2023')
-p1 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023','RGB')
-p2 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023','Labels')
+p1 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023','V1','TifPng','RGB')
+p2 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023','V1','TifPng')
 p00 = os.path.join('../../','raw','CookIRCamET','Images','CprlHY2023')
-p11 = os.path.join('../../','work','CookIRCamET','Images','CprlHY2023','RGB')
-p22 = os.path.join('../../','work','CookIRCamET','Images','CprlHY2023','Labels')
+p11 = os.path.join('../../','work','CookIRCamET','Images','CprlHY2023','V1','TifPng','RGB')
+p22 = os.path.join('../../','work','CookIRCamET','Images','CprlHY2023','V1','TifPng')
 p3 = os.path.join('../../','work','CookIRCamET','Working')
-n_components1 = 2
-n_components2 = 4
+
 n_components3 = 8
-
-
-# In[ ]:
-
-
-cmap1 = mpl.colors.ListedColormap(['y', 'b'])
-norm1 = mpl.colors.BoundaryNorm([0,1], cmap1.N)
-
-cmap2 = mpl.colors.ListedColormap(['r', 'b', 'g','w'])
-norm2 = mpl.colors.BoundaryNorm([0,1,2,3,4], cmap2.N)
-
-
-# In[ ]:
-
 
 def localSD(mat, n):    
     mat=np.float32(mat)
@@ -92,14 +76,12 @@ for di,do in zip([p1,p11],[p2,p22]):
                 if (os.path.exists(f_labels)):
                     labels2 = cv2.imread(f_labels,cv2.IMREAD_UNCHANGED)
                     labels = (True & labels)
-                if labels:         
+                if labels: 
+                     #8-class
+                    labels3 = 4*labels1+labels2
+                    if not os.path.exists(os.path.join(do,'Masks')): os.mkdir(os.path.join(do,'Masks'))
+                    cv2.imwrite(os.path.join(do,'Masks',f.split('_bgr')[0]+'_class8.tif'),labels3)
                     print(f)
-                    plt.imshow(bgr)
-                    plt.show()
-                    plt.imshow(labels1, cmap=cmap1, norm=norm1, interpolation='none')
-                    plt.show()
-                    plt.imshow(labels2, cmap=cmap2, norm=norm2, interpolation='none')
-                    plt.show()
                     lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
                     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
                     img = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
@@ -263,12 +245,14 @@ for di,do in zip([p1,p11],[p2,p22]):
                     #labels = np.sum(np.vstack((soil.ravel().T, residue.ravel().T*2, shadow.ravel().T*3, vegetation.ravel().T*4)).T,axis=1)
                     labels1 = labels1.ravel()        
                     labels2 = labels2.ravel() 
-                    #8-class
-                    labels3 = 4*labels1+labels2   
+                    labels3 = labels3.ravel() 
 
                     if not np.any(np.isnan(feat)):
                         imgs.append({'bgr':bgr,'feats':feat,'labels1':labels1,'labels2':labels2,'labels3':labels3})
                         n_img=n_img+1
+
+                    del lab, hsv, img ,l , a, bb, h, s, v, sd_l1,sd_l2,sd_l3,lbp_l1,lbp_l2,lbp_l3,sd_a1,sd_a2,sd_a3,lbp_a1,lbp_a2,lbp_a3, sd_b1,sd_b2,sd_b3,lbp_b1,lbp_b2,lbp_b3, sd_h1,sd_h2,sd_h3,lbp_h1,lbp_h2,lbp_h3,sd_s1,sd_s2,sd_s3,lbp_s1,lbp_s2,lbp_s3, sd_v1,sd_v2,sd_v3,lbp_v1,lbp_v2,lbp_v3, lap_l1,lap_l2,lap_l3,lap_a1,lap_a2, lap_a3, lap_b1, lap_b2,lap_b3,lap_h1,lap_h2,lap_h3,lap_s1,lap_s2,lap_s3,lap_v1,lap_v2,lap_v3
+
 n_feat = feat.shape[1]
 
 
@@ -285,30 +269,38 @@ for sample in imgs:
     labels2.append(sample['labels2'])
     labels3.append(sample['labels3'])
 
-
-# In[ ]:
-
-
 feats = np.array(feats).reshape((-1,n_feat)).astype(np.float32)
 labels1 = np.array(labels1).reshape((-1,1)).astype(np.int32).ravel()
 labels2 = np.array(labels2).reshape((-1,1)).astype(np.int32).ravel()
 labels3 = np.array(labels3).reshape((-1,1)).astype(np.int32).ravel()
 scaler = StandardScaler()
-filename = os.path.join(p3,'scaler.pk.sav')
+filename = os.path.join(p3,'scaler_mlp.pk.sav')
+#with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 feats = scaler.fit_transform(feats)
 pickle.dump(scaler, open(filename, 'wb'))
 
 
-# In[ ]:
-
-
-train_feats1, test_feats1, train_labels1, test_labels1 = train_test_split(feats, labels1, test_size=0.2, random_state=42)
-train_feats2, test_feats2, train_labels2, test_labels2 = train_test_split(feats, labels2, test_size=0.2, random_state=42)
 train_feats3, test_feats3, train_labels3, test_labels3 = train_test_split(feats, labels3, test_size=0.2, random_state=42)
 
+train_feats = train_feats3#[:,mask3]
+test_feats = test_feats3#[:,mask3]
 
-# In[ ]:
+layers = []
 
+for layer1 in range(1,11):
+    for layer2 in range(1,6):
+        layer = (layer1*n_feat, int(np.sqrt(n_feat*n_components3*layer1*layer2)), layer2*n_components3)
+        layers.append(layer)
+
+parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':layers}
+
+mlp = MLPClassifier(max_iter=100000,random_state=42)
+clf_mlp3 = HalvingGridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+
+clf_mlp3.fit(train_feats, train_labels3)
+
+model_mlp3 = clf_mlp3.best_estimator_
+pred_mlp3 = clf_mlp3.predict(test_feats)
 
 def cornfusion(obs,pred,nclass):
     M = np.zeros((nclass,nclass))
@@ -316,197 +308,49 @@ def cornfusion(obs,pred,nclass):
         o = obs[i]
         p = pred[i]
         M[o,p] = M[o,p]+1
-    return M
+    correct = sum(obs==pred)
+    total = len(pred)
+    M = M/np.sum(np.sum(M))
+    recall = np.diag(M)/np.sum(M,axis=1)
+    precis = np.diag(M)/np.sum(M,axis=0)
 
+    f1=(recall*precis/(recall+precis)*2)
+    f1_weighted=np.sum(f1*np.sum(M, axis=1))
 
-# In[ ]:
-
-
-train_feats = train_feats1#[:,mask1]
-test_feats = test_feats1#[:,mask1]
-
-
-# In[ ]:
-
-
-feats.shape
-
-
-# In[ ]:
-
-
-parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat/4), n_components1*2),
-                                                                     (int(n_feat/2), n_components1*2),
-                                                                     (n_feat, n_components1*2),
-                                                                     (n_feat*2, n_components1*2),
-                                                                     (n_feat*4, n_components1*2),
-                                                                     (int(n_feat/4), n_components1),
-                                                                     (int(n_feat/2), n_components1),
-                                                                     (n_feat, n_components1),
-                                                                     (n_feat*2, n_components1),
-                                                                     (n_feat*4, n_components1))}
-mlp = MLPClassifier(max_iter=100000,random_state=42)
-
-clf_mlp1 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
-clf_mlp1.fit(train_feats, train_labels1)
-
-clf_mlp1.best_params_
-
-model_mlp1 = clf_mlp1.best_estimator_
-
-
-# In[ ]:
-
-
-pred_mlp1 = clf_mlp1.predict(test_feats)
-
-
-# In[ ]:
-
-
-filename = os.path.join(p3,'finalized_model1.pk.sav')
-pickle.dump(model_mlp1, open(filename, 'wb'))
-
-
-# In[ ]:
-
-
-M_mlp1 = cornfusion(test_labels1,pred_mlp1,n_components1)
-M_mlp1 = M_mlp1/np.sum(np.sum(M_mlp1))
-recall1 = np.diag(M_mlp1)/np.sum(M_mlp1,axis=1)
-precis1 = np.diag(M_mlp1)/np.sum(M_mlp1,axis=0)
-M_mlp1
-
-
-# In[ ]:
-
-
-train_feats = train_feats2#[:,mask2]
-test_feats = test_feats2#[:,mask2]
-
-
-# In[ ]:
-
-
-parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat/4), n_components2*2),
-                                                                     (int(n_feat/2), n_components2*2),
-                                                                     (n_feat, n_components2*2),
-                                                                     (n_feat*2, n_components2*2),
-                                                                     (n_feat*4, n_components2*2),
-                                                                     (int(n_feat/4), n_components2),
-                                                                     (int(n_feat/2), n_components2),
-                                                                     (n_feat, n_components2),
-                                                                     (n_feat*2, n_components2),
-                                                                     (n_feat*4, n_components2))}
-mlp = MLPClassifier(max_iter=100000,random_state=42)
-
-clf_mlp2 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
-clf_mlp2.fit(train_feats, train_labels2)
-
-model_mlp2 = clf_mlp2.best_estimator_
-pred_mlp2 = clf_mlp2.predict(test_feats)
-
-
-# In[ ]:
-
-
-M_mlp2 = cornfusion(test_labels2,pred_mlp2,n_components2)
-M_mlp2 = M_mlp2/np.sum(np.sum(M_mlp2))
-recall2 = np.diag(M_mlp2)/np.sum(M_mlp2,axis=1)
-precis2 = np.diag(M_mlp2)/np.sum(M_mlp2,axis=0)
-M_mlp2
-
-
-# In[ ]:
-
-
-precis2
-
-
-# In[ ]:
-
-
-filename = os.path.join(p3,'finalized_model2.pk.sav')
-pickle.dump(model_mlp2, open(filename, 'wb'))
-
-
-# In[ ]:
-
+    return M, f1_weighted, correct/total
 
 train_feats = train_feats3#[:,mask3]
 test_feats = test_feats3#[:,mask3]
 
+layers = []
 
-# In[ ]:
+for layer1 in range(1,11):
+    for layer2 in range(1,6):
+        layer = (layer1*n_feat, int(np.sqrt(n_feat*n_components3*layer1*layer2)), layer2*n_components3)
+        layers.append(layer)
 
+parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':layers}
 
-parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':((int(n_feat/4), n_components3*2),
-                                                                     (int(n_feat/2), n_components3*2),
-                                                                     (n_feat, n_components3*2),
-                                                                     (n_feat*2, n_components3*2),
-                                                                     (n_feat*4, n_components3*2),
-                                                                     (int(n_feat/4), n_components3),
-                                                                     (int(n_feat/2), n_components3),
-                                                                     (n_feat, n_components3),
-                                                                     (n_feat*2, n_components3),
-                                                                     (n_feat*4, n_components3))}#svc = SGDClassifier(max_iter=100000)
 mlp = MLPClassifier(max_iter=100000,random_state=42)
-clf_mlp3 = GridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+clf_mlp3 = HalvingGridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+
 clf_mlp3.fit(train_feats, train_labels3)
 
 model_mlp3 = clf_mlp3.best_estimator_
 pred_mlp3 = clf_mlp3.predict(test_feats)
 
+M_mlp3,f3,a3 = cornfusion(test_labels3,pred_mlp3,n_components3)
 
-# In[ ]:
+plt.matshow(M_mlp3)
+plt.ylabel("Predicted")
+plt.xlabel("Observed")
+plt.title("V1 Confusion Matrix")
+plt.savefig(os.path.join(p3,'m_v1.png'),dpi=300)
 
+print(f3,a3)
 
-M_mlp3 = cornfusion(test_labels3,pred_mlp3,n_components3)
-M_mlp3 = M_mlp3/np.sum(np.sum(M_mlp3))
-recall3 = np.diag(M_mlp3)/np.sum(M_mlp3,axis=1)
-precis3 = np.diag(M_mlp3)/np.sum(M_mlp3,axis=0)
-
-
-M_mlp4 = cornfusion(test_labels3,4*pred_mlp1+pred_mlp2,n_components3)
-M_mlp4 = M_mlp4/np.sum(np.sum(M_mlp4))
-recall4 = np.diag(M_mlp4)/np.sum(M_mlp4,axis=1)
-precis4 = np.diag(M_mlp4)/np.sum(M_mlp4,axis=0)
-M_mlp4
-
-f3=(recall3*precis3/(recall3+precis3)*2)
-f3_weighted=np.sum(f3*np.sum(M_mlp3, axis=1))
-
-f4=(recall4*precis4/(recall4+precis4)*2)
-f4_weighted=np.sum(f4*np.sum(M_mlp4, axis=1))
-print(f3)
-print(f3_weighted)
-print(f4)
-print(f4_weighted)
-
-
-# In[ ]:
-
-
-filename = os.path.join(p3,'finalized_model3.pk.sav')
+filename = os.path.join(p3,'finalized_model3_mlp.pk.sav')
 pickle.dump(model_mlp3, open(filename, 'wb'))
-
-
-# In[ ]:
-
-
-M_mlp1_df = {}
-M_mlp1_df['sun'] = M_mlp1[:,0]
-M_mlp1_df['shade'] = M_mlp1[:,1]
-M_mlp1_df = DataFrame(M_mlp1_df)
-M_mlp1_df.to_csv(os.path.join(p3,'M1.csv'))
-
-M_mlp2_df = {}
-M_mlp2_df['soil'] = M_mlp2[:,0]
-M_mlp2_df['res'] = M_mlp2[:,1]
-M_mlp2_df['can'] = M_mlp2[:,2]
-M_mlp2_df['snow'] = M_mlp2[:,3]
-M_mlp2_df = DataFrame(M_mlp2_df)
-M_mlp2_df.to_csv(os.path.join(p3,'M2.csv'))
 
 M_mlp3_df = {}
 M_mlp3_df['sun_soil'] = M_mlp3[:,0]
@@ -518,31 +362,11 @@ M_mlp3_df['shade_res'] = M_mlp3[:,5]
 M_mlp3_df['shade_can'] = M_mlp3[:,6]
 M_mlp3_df['shade_snow'] = M_mlp3[:,7]
 M_mlp3_df = DataFrame(M_mlp3_df)
-M_mlp3_df.to_csv(os.path.join(p3,'M3.csv'))
-
-M_mlp4_df = {}
-M_mlp4_df['sun_soil'] = M_mlp4[:,0]
-M_mlp4_df['sun_res'] = M_mlp4[:,1]
-M_mlp4_df['sun_can'] = M_mlp4[:,2]
-M_mlp4_df['sun_snow'] = M_mlp4[:,3]
-M_mlp4_df['shade_soil'] = M_mlp4[:,4]
-M_mlp4_df['shade_res'] = M_mlp4[:,5]
-M_mlp4_df['shade_can'] = M_mlp4[:,6]
-M_mlp4_df['shade_snow'] = M_mlp4[:,7]
-M_mlp4_df = DataFrame(M_mlp4_df)
-M_mlp4_df.to_csv(os.path.join(p3,'M4.csv'))
-
-p1_df = DataFrame(clf_mlp1.best_params_)
-p1_df.to_csv(os.path.join(p3,'params1.csv'))
-
-p2_df = DataFrame(clf_mlp2.best_params_)
-p2_df.to_csv(os.path.join(p3,'params2.csv'))
+M_mlp3_df.to_csv(os.path.join(p3,'M3_mlp.csv'))
 
 p3_df = DataFrame(clf_mlp3.best_params_)
-p3_df.to_csv(os.path.join(p3,'params3.csv'))
+p3_df.to_csv(os.path.join(p3,'params3_mlp.csv'))
 
-
-# In[ ]:
 
 
 
