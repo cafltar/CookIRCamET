@@ -14,7 +14,7 @@ from picamera import PiCamera
 import logging 
 
 #image resolution
-ry,rx=1280,960#1920,1440#2592,1952#3840,2160#160,128#256,192#960,544
+ry,rx=1920,1440#2592,1952#3840,2160#160,128#256,192#960,544#1280,960#
 global ex   
 global gain
 ex = None    

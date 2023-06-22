@@ -22,11 +22,11 @@ from multiprocessing import Pool, Process
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
-gpsPath='/home/pi/adagps_mod'
-logging.info(gpsPath)
-sys.path.insert(0,gpsPath)
+#gpsPath='/home/pi/adagps_mod'
+#logging.info(gpsPath)
+#sys.path.insert(0,gpsPath)
 
-import adafruit_gps
+#import adafruit_gps
 
 home = os.path.join("/home","pi")
 p = os.path.join(home,'CookIRCamET','Images')
@@ -36,29 +36,29 @@ lep = os.path.join(home,'LeptonModule','software','raspberrypi_capture')
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 #Initialize GPS
-ts=1
-gps = adafruit_gps.GPS(uart, debug=False)
+#ts=1
+#gps = adafruit_gps.GPS(uart, debug=False)
 # Turn on the basic GGA and RMC info (what you typically want)
-gps.send_command(b"PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")
+#gps.send_command(b"PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")
 # Set update rate to timestep in ms
-ms=str(int(1e3*ts))
-gps.send_command(bytearray("PMTK220,"+ms,'utf-8'))
+#ms=str(int(1e3*ts))
+#gps.send_command(bytearray("PMTK220,"+ms,'utf-8'))
 
-gps.update()
+#gps.update()
 
 #for logger it's stationary
-current_spot,current_time_fix = gpscapture(gps,ts)
+#current_spot,current_time_fix = gpscapture(gps,ts)
 #current_spot = None
-if current_spot is None:
-      current_spot = 'nofix'
+#if current_spot is None:
+#      current_spot = 'nofix'
       
 def bgrpcapture():
       while True:
             r = bgrcapture(ry,rx)
             now = datetime.now(timezone.utc)
-            current_time = now.strftime("%Y%m%d%H%M%S")
+            current_time = now.strftime("%Y%m%d_%H%M%S")
             cv2.imwrite(os.path.join(web,'foo.bmp'),r)
-            fname = current_time+'_'+current_spot+'_bgr.png'
+            fname = current_time+'_bgr.png'
             logging.info(os.path.join(p,fname))
             cv2.imwrite(os.path.join(p,fname),r)
             sleep(app.config['waittime'])
@@ -67,8 +67,8 @@ def irpcapture():
       while True:
             r = ircapture()
             now = datetime.now(timezone.utc)
-            current_time = now.strftime("%Y%m%d%H%M%S")
-            fname = current_time+'_'+current_spot+'_ir.png'
+            current_time = now.strftime("%Y%m%d_%H%M%S")
+            fname = current_time+'_ir.png'
             logging.info(os.path.join(p,fname))
             cv2.imwrite(os.path.join(p,fname),r)
             cv2.normalize(r, r, 0, 65535, cv2.NORM_MINMAX)
@@ -84,7 +84,7 @@ def index():
       now = datetime.now()
       current_time = now.strftime("%Y%d%m%H%M%S")
 
-      return render_template('camera.html', time=current_time+' '+current_spot)
+      return render_template('camera.html', time=current_time)
 
 if __name__ == '__main__':     
       if len(sys.argv)>1:
