@@ -304,21 +304,24 @@ def cornfusion(obs,pred,nclass):
 train_feats = train_feats3#[:,mask3]
 test_feats = test_feats3#[:,mask3]
 
-layers = []
-
-for layer1 in range(1,11):
-    for layer2 in range(1,6):
-        layer = (layer1*n_feat, int(np.sqrt(n_feat*n_components3*layer1*layer2)), layer2*n_components3)
-        layers.append(layer)
-
-parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':layers}
-
-mlp = MLPClassifier(max_iter=100000,random_state=42)
-clf_mlp3 = HalvingGridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
-
+clf_mlp3 = MLPClassifier(max_iter=100000,random_state=42,hidden_layer_sizes=[180,84,40],activation='relu')
 clf_mlp3.fit(train_feats, train_labels3)
 
-model_mlp3 = clf_mlp3.best_estimator_
+# layers = []
+
+# for layer1 in range(1,11):
+#     for layer2 in range(1,6):
+#         layer = (layer1*n_feat, int(np.sqrt(n_feat*n_components3*layer1*layer2)), layer2*n_components3)
+#         layers.append(layer)
+
+# parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':layers}
+
+# mlp = MLPClassifier(max_iter=100000,random_state=42)
+# clf_mlp3 = HalvingGridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+
+# clf_mlp3.fit(train_feats, train_labels3)
+
+model_mlp3 = clf_mlp3#.best_estimator_
 pred_mlp3 = clf_mlp3.predict(test_feats)
 
 M_mlp3,f3,a3 = cornfusion(test_labels3,pred_mlp3,n_components3)
@@ -346,8 +349,8 @@ M_mlp3_df['shade_snow'] = M_mlp3[:,7]
 M_mlp3_df = DataFrame(M_mlp3_df)
 M_mlp3_df.to_csv(os.path.join(p3,'M3_mlp_v2.csv'))
 
-p3_df = DataFrame(clf_mlp3.best_params_)
-p3_df.to_csv(os.path.join(p3,'params3_mlp_v2.csv'))
+# p3_df = DataFrame(clf_mlp3.best_params_)
+# p3_df.to_csv(os.path.join(p3,'params3_mlp_v2.csv'))
 
 
 
