@@ -7,7 +7,6 @@
 import sys
 import numpy as np
 import cv2
-import cv2.ml
 from time import sleep
 from datetime import datetime
 import pysolar
@@ -17,7 +16,10 @@ from random import shuffle
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 from pandas import read_csv, read_excel, DataFrame
-from skimage.feature import hessian_matrix_det as Hessian
+import dask.array as da
+from dask_ml.wrappers import Incremental
+from dask_ml.model_selection import SuccessiveHalvingSearchCV
+
 from skimage.feature import local_binary_pattern as LBP
 from sklearn.model_selection import train_test_split
 from sklearn.experimental import enable_halving_search_cv # noqa
@@ -261,18 +263,12 @@ n_feat = feat.shape[1]
 
 
 feats = []
-labels1 = []
-labels2 = []
 labels3 = []
 for sample in imgs:
     feats.append(sample['feats'])
-    labels1.append(sample['labels1'])
-    labels2.append(sample['labels2'])
     labels3.append(sample['labels3'])
-
+del samples
 feats = np.array(feats).reshape((-1,n_feat)).astype(np.float32)
-labels1 = np.array(labels1).reshape((-1,1)).astype(np.int32).ravel()
-labels2 = np.array(labels2).reshape((-1,1)).astype(np.int32).ravel()
 labels3 = np.array(labels3).reshape((-1,1)).astype(np.int32).ravel()
 scaler = StandardScaler()
 filename = os.path.join(p3,'scaler_mlp_v2.pk.sav')

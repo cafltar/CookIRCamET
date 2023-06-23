@@ -7,7 +7,6 @@
 import sys
 import numpy as np
 import cv2
-import cv2.ml
 from time import sleep
 from datetime import datetime
 import pysolar
@@ -16,8 +15,11 @@ import numpy as np
 from random import shuffle
 from matplotlib import pyplot as plt
 import matplotlib as mpl
+import dask.array as da
+from dask_ml.wrappers import Incremental
+from dask_ml.model_selection import SuccessiveHalvingSearchCV
+
 from pandas import read_csv, read_excel, DataFrame
-from skimage.feature import hessian_matrix_det as Hessian
 from skimage.feature import local_binary_pattern as LBP
 from sklearn.model_selection import train_test_split
 from sklearn.experimental import enable_halving_search_cv # noqa
@@ -242,6 +244,7 @@ for di,do in zip([p1,p11],[p2,p22]):
                                       sd_v1.T,sd_v2.T,sd_v3.T,
                                       lbp_v1.T,lbp_v2.T,lbp_v3.T,
                                       lap_v1.T,lap_v2.T,lap_v3.T)).T
+                    chunk = feat.shape
                     #labels = np.sum(np.vstack((soil.ravel().T, residue.ravel().T*2, shadow.ravel().T*3, vegetation.ravel().T*4)).T,axis=1)
                     labels1 = labels1.ravel()        
                     labels2 = labels2.ravel() 
@@ -260,25 +263,24 @@ n_feat = feat.shape[1]
 
 
 feats = []
-labels1 = []
-labels2 = []
 labels3 = []
 for sample in imgs:
     feats.append(sample['feats'])
-    labels1.append(sample['labels1'])
-    labels2.append(sample['labels2'])
     labels3.append(sample['labels3'])
 
-feats = np.array(feats).reshape((-1,n_feat)).astype(np.float32)
-labels1 = np.array(labels1).reshape((-1,1)).astype(np.int32).ravel()
-labels2 = np.array(labels2).reshape((-1,1)).astype(np.int32).ravel()
-labels3 = np.array(labels3).reshape((-1,1)).astype(np.int32).ravel()
+del samples
+
+feats = [da.from_array(feat, chunks='auto') for feat in feats]
+feats = da.concatenate(feats).reshape((-1,n_feat)).astype(np.float32)
+labels3 = [da.from_array(label, chunks='auto') for label in labels3]
+labels3 = da.concatenate(labels3).reshape((-1,1)).astype(np.float32)
+classes = da.unique(labels3).compute()
+
 scaler = StandardScaler()
 filename = os.path.join(p3,'scaler_mlp.pk.sav')
 #with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 feats = scaler.fit_transform(feats)
 pickle.dump(scaler, open(filename, 'wb'))
-
 
 train_feats3, test_feats3, train_labels3, test_labels3 = train_test_split(feats, labels3, test_size=0.2, random_state=42)
 
@@ -302,7 +304,8 @@ def cornfusion(obs,pred,nclass):
 train_feats = train_feats3#[:,mask3]
 test_feats = test_feats3#[:,mask3]
 clf_mlp3 = MLPClassifier(max_iter=100000,random_state=42,hidden_layer_sizes=[240,16],activation='logistic')
-clf_mlp3.fit(train_feats, train_labels3)
+inc = Incremental(clf_mlp3, scoring='accuracy')
+inc.fit(train_feats, train_labels3,classes=classes)
 
 # layers = []
 
@@ -318,8 +321,8 @@ clf_mlp3.fit(train_feats, train_labels3)
 
 # clf_mlp3.fit(train_feats, train_labels3)
 
-model_mlp3 = clf_mlp3#.best_estimator_
-pred_mlp3 = clf_mlp3.predict(test_feats)
+#model_mlp3 = clf_mlp3#.best_estimator_
+pred_mlp3 = inc.predict(test_feats)
 
 M_mlp3,f3,a3 = cornfusion(test_labels3,pred_mlp3,n_components3)
 
@@ -332,7 +335,7 @@ plt.savefig(os.path.join(p3,'m_v1.png'),dpi=300)
 print(f3,a3)
 
 filename = os.path.join(p3,'finalized_model3_mlp_v1.pk.sav')
-pickle.dump(model_mlp3, open(filename, 'wb'))
+pickle.dump(inc, open(filename, 'wb'))
 
 M_mlp3_df = {}
 M_mlp3_df['sun_soil'] = M_mlp3[:,0]
