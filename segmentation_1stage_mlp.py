@@ -15,9 +15,6 @@ import numpy as np
 from random import shuffle
 from matplotlib import pyplot as plt
 import matplotlib as mpl
-import dask.array as da
-from dask_ml.wrappers import Incremental
-from dask_ml.model_selection import SuccessiveHalvingSearchCV
 
 from pandas import read_csv, read_excel, DataFrame
 from skimage.feature import local_binary_pattern as LBP
@@ -270,19 +267,17 @@ for sample in imgs:
 
 del samples
 
-feats = [da.from_array(feat, chunks='auto') for feat in feats]
-feats = da.concatenate(feats).reshape((-1,n_feat)).astype(np.float32)
-labels3 = [da.from_array(label, chunks='auto') for label in labels3]
-labels3 = da.concatenate(labels3).reshape((-1,1)).astype(np.float32)
-classes = da.unique(labels3).compute()
-
+feats = np.array(feats).reshape((-1,n_feat)).astype(np.float32)
+labels3 = np.array(labels3).reshape((-1,1)).astype(np.int32).ravel()
 scaler = StandardScaler()
-filename = os.path.join(p3,'scaler_mlp.pk.sav')
+filename = os.path.join(p3,'scaler_mlp_v2.pk.sav')
 #with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 feats = scaler.fit_transform(feats)
 pickle.dump(scaler, open(filename, 'wb'))
 
+
 train_feats3, test_feats3, train_labels3, test_labels3 = train_test_split(feats, labels3, test_size=0.2, random_state=42)
+
 
 def cornfusion(obs,pred,nclass):
     M = np.zeros((nclass,nclass))
@@ -303,26 +298,26 @@ def cornfusion(obs,pred,nclass):
 
 train_feats = train_feats3#[:,mask3]
 test_feats = test_feats3#[:,mask3]
-clf_mlp3 = MLPClassifier(max_iter=100000,random_state=42,hidden_layer_sizes=[240,16],activation='logistic')
-inc = Incremental(clf_mlp3, scoring='accuracy')
-inc.fit(train_feats, train_labels3,classes=classes)
 
-# layers = []
-
-# for layer1 in range(1,11):
-#     for layer2 in range(1,6):
-#         layer = (layer1*n_feat, int(np.sqrt(n_feat*n_components3*layer1*layer2)), layer2*n_components3)
-#         layers.append(layer)
-
-# parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':layers}
-
-# mlp = MLPClassifier(max_iter=100000,random_state=42)
-# clf_mlp3 = HalvingGridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
-
+# clf_mlp3 = MLPClassifier(max_iter=100000,random_state=42,hidden_layer_sizes=[180,84,40],activation='relu')
 # clf_mlp3.fit(train_feats, train_labels3)
 
-#model_mlp3 = clf_mlp3#.best_estimator_
-pred_mlp3 = inc.predict(test_feats)
+layers = []
+
+for layer1 in range(1,11):
+    for layer2 in range(1,6):
+        layer = (layer1*n_feat, int(np.sqrt(n_feat*n_components3*layer1*layer2)), layer2*n_components3)
+        layers.append(layer)
+
+parameters = {'activation':('relu','logistic'),'hidden_layer_sizes':layers}
+
+mlp = MLPClassifier(max_iter=100000,random_state=42)
+clf_mlp3 = HalvingGridSearchCV(mlp, parameters,n_jobs=-1,cv=5)
+
+clf_mlp3.fit(train_feats, train_labels3)
+
+model_mlp3 = clf_mlp3.best_estimator_
+pred_mlp3 = clf_mlp3.predict(test_feats)
 
 M_mlp3,f3,a3 = cornfusion(test_labels3,pred_mlp3,n_components3)
 
@@ -349,8 +344,8 @@ M_mlp3_df['shade_snow'] = M_mlp3[:,7]
 M_mlp3_df = DataFrame(M_mlp3_df)
 M_mlp3_df.to_csv(os.path.join(p3,'M3_mlp_v1.csv'))
 
-# p3_df = DataFrame(clf_mlp3.best_params_)
-# p3_df.to_csv(os.path.join(p3,'params3_mlp_v2.csv'))
+p3_df = DataFrame(clf_mlp3.best_params_)
+p3_df.to_csv(os.path.join(p3,'params3_mlp_v2.csv'))
 
 
 
