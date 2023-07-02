@@ -265,12 +265,12 @@ for sample in imgs:
     feats.append(sample['feats'])
     labels3.append(sample['labels3'])
 
-del samples
+del imgs
 
 feats = np.array(feats).reshape((-1,n_feat)).astype(np.float32)
 labels3 = np.array(labels3).reshape((-1,1)).astype(np.int32).ravel()
 scaler = StandardScaler()
-filename = os.path.join(p3,'scaler_mlp_v2.pk.sav')
+filename = os.path.join(p3,'scaler_mlp_v1.pk.sav')
 #with joblib.parallel_backend('dask', wait_for_workers_timeout=60):
 feats = scaler.fit_transform(feats)
 pickle.dump(scaler, open(filename, 'wb'))
@@ -345,7 +345,7 @@ M_mlp3_df = DataFrame(M_mlp3_df)
 M_mlp3_df.to_csv(os.path.join(p3,'M3_mlp_v1.csv'))
 
 p3_df = DataFrame(clf_mlp3.best_params_)
-p3_df.to_csv(os.path.join(p3,'params3_mlp_v2.csv'))
+p3_df.to_csv(os.path.join(p3,'params3_mlp_v1.csv'))
 
 
 
