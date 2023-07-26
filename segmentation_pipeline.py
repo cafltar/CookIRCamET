@@ -27,8 +27,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
-    version = sys.argv([1])
-    model = sys.argv([2])
+    version = sys.argv[1]
+    model = sys.argv[2]
     print(version)
     p1 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023',version,'TifPng','RGB')
     p2 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023',version,'TifPng')
