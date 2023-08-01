@@ -94,39 +94,56 @@ if __name__ == "__main__":
     #Pipeline
     #initial scaling
     scaler = StandardScaler()
-    #pca
-    pca = PCA(svd_solver='full')
-    if model == 'mlp':
-        #mlp
+    #Best parameter (CV score=0.892):
+    #{'clf__activation': 'logistic', 'clf__hidden_layer_sizes': (432, 117, 32), 'pca__n_components': 0.999}
+
+    if version=='V1':
+        #pca
+        pca = PCA(svd_solver='full',n_components=0.999)
+        clf = MLPClassifier(max_iter=1000,hidden_layer_sizes=[432,117,32],activation='logistic')
+        pipeline = Pipeline(steps=[("scaler", scaler), ("pca", pca), ("clf", clf)])
+        pipeline.fit(train_feats,train_labels)
+        filename = os.path.join(p3,'model_pipeline_'+version+'_'+model+'_final.pk.sav')
+        with open(filename, 'wb') as f:  # Python 3: open(..., 'wb'
+            pickle.dump(pipeline.best_estimator_, f)
+
+        pred = pipeline.predict(test_feats)
+
+    elif version=='V2':
+        #pca
+        pca = PCA(svd_solver='full')
         clf = MLPClassifier(max_iter=1000)
-        #tune hyperparameters
-        layers = []
+        if model == 'mlp':
+            #mlp
+            clf = MLPClassifier(max_iter=1000)
+            #tune hyperparameters
+            layers = []
 
-        for layer1 in [2,4,8,16]:
-            for layer2 in [2,4]:
-                layer = (layer1*n_feat//2, int(np.sqrt(n_feat//2*n_components*layer1*layer2)), layer2*n_components)
-                layers.append(layer)
+            for layer1 in [2,4,8,16]:
+                for layer2 in [2,4]:
+                    layer = (layer1*n_feat//2, int(np.sqrt(n_feat//2*n_components*layer1*layer2)), layer2*n_components)
+                    layers.append(layer)
 
-        parameters = {'pca__n_components':(0.99,0.999),'clf__activation':('relu','logistic'),'clf__hidden_layer_sizes':layers}
+            parameters = {'pca__n_components':(0.99,0.999),'clf__activation':('relu','logistic'),'clf__hidden_layer_sizes':layers}
 
-    elif model == 'hgbc':
-        clf = HistGradientBoostingClassifier(max_iter=1000)
+        elif model == 'hgbc':
+            clf = HistGradientBoostingClassifier(max_iter=1000)
 
-        parameters = {'pca__n_components':(0.99,0.999),'clf__min_samples_leaf':(20,200,2000,20000),'clf__max_bins':(31,63,127,255)}
+            parameters = {'pca__n_components':(0.99,0.999),'clf__min_samples_leaf':(20,200,2000,20000),'clf__max_bins':(31,63,127,255)}
 
-    pipeline = Pipeline(steps=[("scaler", scaler), ("pca", pca), ("clf", clf)])
+        pipeline = Pipeline(steps=[("scaler", scaler), ("pca", pca), ("clf", clf)])
 
-    search = HalvingGridSearchCV(pipeline, parameters,n_jobs=-1,cv=5)
+        search = HalvingGridSearchCV(pipeline, parameters,n_jobs=-1,cv=5)
 
-    search.fit(train_feats, train_labels)
-    print("Best parameter (CV score=%0.3f):" % search.best_score_)
-    print(search.best_params_)
-    filename = os.path.join(p3,'model_pipeline_'+version+'_'+model+'_final.pk.sav')
-    with open(filename, 'wb') as f:  # Python 3: open(..., 'wb'
-        pickle.dump(search.best_estimator_, filename)
-
-    pred = search.predict(test_feats)
-
+        search.fit(train_feats, train_labels)
+        print("Best parameter (CV score=%0.3f):" % search.best_score_)
+        print(search.best_params_)
+        filename = os.path.join(p3,'model_pipeline_'+version+'_'+model+'_final.pk.sav')
+        with open(filename, 'wb') as f:  # Python 3: open(..., 'wb'
+            pickle.dump(search.best_estimator_, f)
+            
+        pred = search.predict(test_feats)
+        
     M,f,a = cornfusion(test_labels,pred,n_components)
 
     plt.matshow(M)
