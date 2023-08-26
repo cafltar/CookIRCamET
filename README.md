@@ -4,5 +4,8 @@ This code performs a number of functions related to the combined infrared/RGB ca
 -registration
 -et estimation
 -calibration
+Versions 1&2 of the camera use:
 
-Logging has been supplanted by C++ code in the repository flir_opencv.
+Version 3 uses:
+
+Both:
