@@ -147,6 +147,11 @@ class ir_cam:
     logging.info(os.path.join(web,'bar.bmp'))
     return ir
 
+  def run(self):
+    while True:
+      self.capture()
+      sleep(self.waittime)
+  
   def __del__(self):
     libuvc.uvc_stop_streaming(self.devh)
     libuvc.uvc_unref_device(self.dev)
@@ -158,13 +163,16 @@ class bgr_cam:
     self.cam_bgr = Picamera2(0)
     camera_config = self.cam_bgr.create_still_configuration(main={"size": (rx, ry)})
     self.cam_bgr.configure(camera_config)
+    self.cam_bgr.controls.ExposureTime = exp_time
+    self.cam_bgr.controls.AwbEnable = False
+    self.cam_bgr.controls.AeEnable = False
+    self.cam_bgr.controls.NoiseReductionMode = controls.draft.NoiseReductionModeEnum.Off   
     self.cam_bgr.set_controls({"AfMode":controls.AfModeEnum.Continuous,
-                               #"AeEnable:":False,
-                               #"AwbEnable:":False,
                                "Brightness":brightness,
-                               "Contrast":contrast,
-                               "ExposureTime":exp_time,
+                               "Contrast":contrast,             
                                "FrameDurationLimits": (frame_time, frame_time)})
+
+    logging.info(self.cam_bgr.controls)
     self.cam_bgr.start()
     return None
 
@@ -179,5 +187,10 @@ class bgr_cam:
     cv2.imwrite(os.path.join(web,'foo.bmp'),r)
     return r
 
+  def run(self):
+    while True:
+      self.capture()
+      sleep(self.waittime)
+  
   def __del__(self):
       self.cam_bgr.stop()
