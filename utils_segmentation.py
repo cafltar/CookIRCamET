@@ -27,9 +27,18 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 
-p0 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2023')
-p00 = os.path.join('../../','raw','CookIRCamET','Images','CprlHY2023')
-p3 = os.path.join('../../','work','CookIRCamET','Working')
+import platform
+
+
+if platform.uname().system=='Windows':
+    p0 = os.path.join('E:','usda','raw','CookIRCamET','Images','CookHY2023')
+    p00 = os.path.join('E:','usda','raw','CookIRCamET','Images','CprlHY2023')
+    p3 = os.path.join('E:','usda','work','CookIRCamET','Working')
+else:
+    p0 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2023')
+    p00 = os.path.join('../../','raw','CookIRCamET','Images','CprlHY2023')
+    p3 = os.path.join('../../','work','CookIRCamET','Working')
+
 
 n_components = 8
 
