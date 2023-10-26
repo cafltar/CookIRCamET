@@ -281,7 +281,7 @@ def register_ir(ir,v,bgr,warp_mat=None):
         warp_mat = cv2.estimateAffine2D(src,dst)
         warp_dst = None
     else:
-        print('Apply affine')
+        #print('Apply affine')
         warp_dst = cv2.warpAffine(ir, warp_mat[0], (v.shape[1], v.shape[0]),flags=cv2.INTER_NEAREST)   
     return warp_mat, warp_dst
 
