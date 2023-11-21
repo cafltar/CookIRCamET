@@ -29,8 +29,8 @@ import logging
 
 #image resolution
 ry,rx=1920,1440#2592,1952#3840,2160#160,128#256,192#960,544#1280,960#
-exp_time = 1200    
-frame_time = 1000000//30
+exp_time = 1000    
+frame_time = 500000//30
 brightness = 0.0
 contrast = 1.0
 
@@ -167,19 +167,25 @@ class bgr_cam:
     self.cam_bgr.controls.AwbEnable = False
     self.cam_bgr.controls.AeEnable = False
     self.cam_bgr.controls.NoiseReductionMode = controls.draft.NoiseReductionModeEnum.Off   
-    self.cam_bgr.set_controls({"AfMode":controls.AfModeEnum.Continuous,
+#    self.cam_bgr.set_controls({"AfMode":controls.AfModeEnum.Continuous,
+#                               "Brightness":brightness,
+#                               "Contrast":contrast,             
+#                               "FrameDurationLimits": (frame_time, frame_time)})
+    self.cam_bgr.set_controls({"AfMode":controls.AfModeEnum.Auto,
                                "Brightness":brightness,
                                "Contrast":contrast,             
                                "FrameDurationLimits": (frame_time, frame_time)})
 
     logging.info(self.cam_bgr.controls)
     self.cam_bgr.start()
+    success = self.cam_bgr.autofocus_cycle()
     return None
 
   def capture(self):
     now = datetime.now(timezone.utc)
     current_time = now.strftime("%Y%m%d_%H%M%S")
     r = self.cam_bgr.capture_array()
+    r = np.flip(r,axis=2)
     fname = current_time+'_bgr.png'
     logging.info(os.path.join(p,fname))
     cv2.imwrite(os.path.join(p,fname),r)
