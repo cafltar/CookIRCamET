@@ -1,9 +1,10 @@
-import sys
-import numpy as np
+#import sys
+#import numpy as np
 import cv2
 import time
 from time import sleep
-from datetime import datetime, timezone
+from datetime import timezone
+from azupload import *
 
 import os
 import numpy as np
@@ -141,6 +142,8 @@ class ir_cam:
     fname = current_time+'_ir.png'
     logging.info(os.path.join(p,fname))
     cv2.imwrite(os.path.join(p,fname),ir)
+    upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
+
     cv2.normalize(ir, ir, 0, 65535, cv2.NORM_MINMAX)
     np.right_shift(ir, 8, ir)
     cv2.imwrite(os.path.join(web,'bar.bmp'),np.uint8(ir))
@@ -189,6 +192,7 @@ class bgr_cam:
     fname = current_time+'_bgr.png'
     logging.info(os.path.join(p,fname))
     cv2.imwrite(os.path.join(p,fname),r)
+    upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
     logging.info(os.path.join(web,'foo.bmp'))
     cv2.imwrite(os.path.join(web,'foo.bmp'),r)
     return r
