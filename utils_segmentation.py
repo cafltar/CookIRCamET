@@ -31,11 +31,15 @@ import platform
 
 
 if platform.uname().system=='Windows':
-    p0 = os.path.join('E:','usda','raw','CookIRCamET','Images','CookHY2023')
-    p00 = os.path.join('E:','usda','raw','CookIRCamET','Images','CprlHY2023')
+    q = os.path.join('E:','usda','raw','CookIRCamET')
+    p0 = os.path.join(q,'Images','CookHY2023')
+    p1 = os.path.join(q,'Images','CookHY2024')
+    p00 = os.path.join(q,'Images','CprlHY2023')
     p3 = os.path.join('E:','usda','work','CookIRCamET','Working')
 else:
+    q = os.path.join('../../','raw','CookIRCamET')
     p0 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2023')
+    p1 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2024')
     p00 = os.path.join('../../','raw','CookIRCamET','Images','CprlHY2023')
     p3 = os.path.join('../../','work','CookIRCamET','Working')
 
@@ -92,7 +96,7 @@ def register_ir(ir,v,bgr,warp_mat=None):
     # plt.show()     
 
     dilate_v=True
-    dilate_ir=False
+    dilate_ir=True
     erode_v=True
     erode_ir=False
     hough_thresh_ir=36
@@ -119,6 +123,14 @@ def register_ir(ir,v,bgr,warp_mat=None):
         ir = cv2.adaptiveThreshold(ir,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY_INV,41,50)
         #_,ir = cv2.threshold(ir,137,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
         erodewin = int(1920/(1280/2))+1
+        
+        plt.imshow(v)
+        plt.title('v')
+        plt.show()     
+        plt.imshow(ir)
+        plt.title('ir')
+        plt.show()     
+
         if erode_v:
             kernel = np.ones((erodewin,erodewin),np.uint8)
             v = cv2.erode(v,kernel,iterations = 1)
