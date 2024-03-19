@@ -38,16 +38,23 @@ logging.basicConfig(level=logging.INFO)
 if __name__ == "__main__":
     version = sys.argv[1]
     model = sys.argv[2]
+    hy = sys.argv[3]
     print(version)
     print(version)
-    p1 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023',version,'TifPng','RGB')
-    p2 = os.path.join('../../','work','CookIRCamET','Images','CookHY2023',version,'TifPng')
-    p11 = os.path.join('../../','work','CookIRCamET','Images','CprlHY2023',version,'TifPng','RGB')
-    p22 = os.path.join('../../','work','CookIRCamET','Images','CprlHY2023',version,'TifPng')
+    p1 = os.path.join('../../','work','CookIRCamET','Images','CookHY'+hy,version,'TifPng','RGB')
+    p2 = os.path.join('../../','work','CookIRCamET','Images','CookHY'+hy,version,'TifPng')
+    p11 = os.path.join('../../','work','CookIRCamET','Images','CprlHY'+hy,version,'TifPng','RGB')
+    p22 = os.path.join('../../','work','CookIRCamET','Images','CprlHY'+hy,version,'TifPng')
+    if hy=='2024':
+        p1_list = [p1]
+        p2_list = [p2]
+    else:
+        p1_list = [p1,p11]
+        p2_list = [p2,p22]
     f_imgs=[]
     imgs=[]
     n_img=0
-    for di,do in zip([p1,p11],[p2,p22]):
+    for di,do in zip(p1_list,p2_list):
         fs=os.listdir(di)
         print(di)
         print(do)
@@ -131,7 +138,7 @@ if __name__ == "__main__":
     print(search.best_params_)
     pipeline = Pipeline(steps=[("scaler", scaler), ("pca", pca), ("clf", search.best_estimator_)])
     
-    filename = os.path.join(p3,'model_pipeline_'+version+'_'+model+'_final.pk.sav')
+    filename = os.path.join(p3,'model_pipeline_'+version+'_'+model+'_'+hy+'_final.pk.sav')
     with open(filename, 'wb') as f:  # Python 3: open(..., 'wb'
         pickle.dump(pipeline, f)
         
@@ -143,7 +150,7 @@ if __name__ == "__main__":
     plt.ylabel("Predicted")
     plt.xlabel("Observed")
     plt.title(version+" Confusion Matrix")
-    plt.savefig(os.path.join(p3,'m_'+version+'_'+model+'_final.png'),dpi=300)
+    plt.savefig(os.path.join(p3,'m_'+version+'_'+model+'_'+hy+'_final.png'),dpi=300)
     
     print(f,a)
     
@@ -157,10 +164,10 @@ if __name__ == "__main__":
     M_df['shade_can'] = M[:,6]
     M_df['shade_snow'] = M[:,7]
     M_df = DataFrame(M_df)
-    M_df.to_csv(os.path.join(p3,'M_'+version+'_'+model+'_final.csv'))
+    M_df.to_csv(os.path.join(p3,'M_'+version+'_'+model+'_'+hy+'_final.csv'))
     
     p_df = DataFrame(search.best_params_)
-    p_df.to_csv(os.path.join(p3,'params_'+version+'_'+model+'_final.csv'))
+    p_df.to_csv(os.path.join(p3,'params_'+version+'_'+model+'_'+hy+'_final.csv'))
 
 
 # In[ ]:
