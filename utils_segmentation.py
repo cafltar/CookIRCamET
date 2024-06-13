@@ -46,7 +46,6 @@ else:
 
 n_components = 8
 
-
 plots = False
 
 def localSD(mat, n):    
