@@ -31,11 +31,11 @@ import platform
 
 
 if platform.uname().system=='Windows':
-    q = os.path.join('E:','usda','raw','CookIRCamET')
+    q = os.path.join('F:','usda','raw','CookIRCamET')
     p0 = os.path.join(q,'Images','CookHY2023')
     p1 = os.path.join(q,'Images','CookHY2024')
     p00 = os.path.join(q,'Images','CprlHY2023')
-    p3 = os.path.join('E:','usda','work','CookIRCamET','Working')
+    p3 = os.path.join('F:','usda','work','CookIRCamET','Working')
 else:
     q = os.path.join('../../','raw','CookIRCamET')
     p0 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2023')

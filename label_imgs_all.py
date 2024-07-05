@@ -8,7 +8,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 from utils_segmentation import *
 
-plots = True
+plots = False
 
 cmap = mpl.colors.ListedColormap(['y', 'r', 'g','w','b','m','c','k'])
 norm = mpl.colors.BoundaryNorm([0,1,2,3,4,5,6,7,8], cmap.N)
@@ -79,16 +79,16 @@ print('%3.4fx+%3.4f x>=%3.4f'%(model2.coef_[0][0],model2.intercept_,I1))
 #                                                          [[model_mlp_v1,model_mlp_v2],[model_mlp_v3],[model_mlp_v1,model_mlp_v2]],
 #                                                          [start_dates_cook,start_dates_cook,start_dates_cprl],
 #                                                          [stop_dates_cook, stop_dates_cook, stop_dates_cprl]):
-# for di, versions, models, start_dates, stop_dates in zip([p00],
-#                                                         [['V2']],
-#                                                         [[model_mlp_v2]],
-#                                                         [start_dates_cprl],
-#                                                         [stop_dates_cprl]):
-for di, versions, models, start_dates, stop_dates in zip([p1],
-                                                         [['V3']],
-                                                          [[model_mlp_v3]],
-                                                          [start_dates_cook],
-                                                          [stop_dates_cook]):
+for di, versions, models, start_dates, stop_dates in zip([p00],
+                                                        [['V2']],
+                                                        [[model_mlp_v2]],
+                                                        [start_dates_cprl],
+                                                        [stop_dates_cprl]):
+#for di, versions, models, start_dates, stop_dates in zip([p1],
+#                                                         [['V3']],
+#                                                          [[model_mlp_v3]],
+#                                                          [start_dates_cook],
+#                                                          [stop_dates_cook]):
 # for di, versions, models, start_dates, stop_dates in zip([p0],
 #                                                          [['V1']],
 #                                                          [[model_mlp_v1]],
@@ -228,123 +228,56 @@ for di, versions, models, start_dates, stop_dates in zip([p1],
                 phi = solar.get_azimuth(lat,lon,utc)
                 day = False
                 try:
-                    _,_,v = cv2.split(cv2.cvtColor(bgr,cv2.COLOR_BGR2HSV))
-                    if theta>10.0:
-                        day = True
-                        feat = get_features(bgr)
-    
-                        if not np.any(np.isnan(feat)):
-                            pred_mlp = model.predict(feat).reshape(bgr.shape[0:2]).astype(np.float)
-                            if plots and n_img%250==0:
-                                plt.imclf(bgr)
-                                plt.title('bgr')
-                                plt.savefig(os.path.join(p3,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
-    +'_bgr.png'),dpi=300)
-                                plt.clf()
-    
-                                plt.imclf(pred_mlp, cmap=cmap, norm=norm, interpolation='none')
-                                plt.title('labels')
-                                plt.savefig(os.path.join(p3,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
-    +'_lab.png'),dpi=300)
-                                plt.clf()
-                        
-                        ir_good = False 
-                        if os.path.getsize(os.path.join(di,version,f_ir))>10000:
-                            ir_raw = cv2.imread(os.path.join(di,version,f_ir),cv2.IMREAD_UNCHANGED)
-                            
-                            if np.std(ir_raw)<1000:
-                                ir_good = True
-                            else:
-                                ir_good = False
-                        if ir_good:
-                            if di==p0:
-                                if utc<start_dates[6] and ti_change:#calculate affine - camera shift - get mask
-                                    try:
-                                        warp_mat,_ = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=None)
-                                    except:
-                                        pass
-                                    
-                                    mask = (pred_mlp==3) | (pred_mlp==7)
-                            elif di==p00:
-                                if utc<=start_dates[3] and utc>=stop_dates[2]:
-                                    print(utc)
-                                    #calculate affine - camera shift - get mask
-                                    #warp_mat,_ = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=None)
-                                    mask = (pred_mlp==3) | (pred_mlp==7)
-                            _,ir = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=warp_mat)
-                            T_ir = ir.astype(np.float)
-                            
-                            
-                            if version=='V3':
-                                T_ir_ = T_ir.reshape(-1)
-                                tmp = cal_nsar_v3.predict(T_ir_.reshape(-1,1))
-                                T_ir_ = tmp.reshape(-1)
-                                T_ir = T_ir_.reshape(T_ir.shape)
-                                T_ir[T_ir==cal_nsar_v3.intercept_] = np.nan
-                            else:
-                                T_ir = np.piecewise(T_ir, [T_ir < I0, (T_ir>=I0) & (T_ir<I1), T_ir>=I1], [lambda x: model0.intercept_[0]+model0.coef_[0][0]*x, lambda x: model1.intercept_[0]+model1.coef_[0][0]*x, lambda x: model2.intercept_[0]+model2.coef_[0][0]*x])
-                                T_ir[T_ir==model0.intercept_] = np.nan
-                            if di==p0 or di==p1:
-                                if utc<start_dates[6]:
-                                    T_ir[mask] = np.nan
-                                    pred_mlp[mask] = np.nan
-                            elif di==p00:
-                            #     T_ir = T_ir*cal_cprl.coef_+cal_cprl.intercept_
-                            
-                                if utc<=start_dates[3] and utc>=stop_dates[2]:
-                                    T_ir[mask] = np.nan
-                                    pred_mlp[mask] = np.nan      
-                                    
-                            
-                            T_ir = T_ir*(1/.98)**(1/4)
-                            if plots and n_img%250==0:
-                                plt.imclf(T_ir)
-                                plt.colorbar()
-                                plt.savefig(os.path.join(p3,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
-    +'_tir.png'),dpi=300)
-                                plt.clf()
-                        else:
-                            T_ir = np.nan*v.reshape(bgr.shape[0:2])
-    
-                        noon_delta_new = np.abs(theta-90) 
-                        if noon_delta_new<noon_delta_old:#near noon
-                            pred_mlp_noon=pred_mlp.copy()
-                        noon_delta_old = noon_delta_new
-    
-                        f_sol_sun.append(np.nansum(pred_mlp==0)/pred_mlp.shape[0]/pred_mlp.shape[1])
-                        f_sol_shd.append(np.nansum(pred_mlp==4)/pred_mlp.shape[0]/pred_mlp.shape[1])
-                        f_res_sun.append(np.nansum(pred_mlp==1)/pred_mlp.shape[0]/pred_mlp.shape[1])
-                        f_res_shd.append(np.nansum(pred_mlp==5)/pred_mlp.shape[0]/pred_mlp.shape[1])
-                        f_veg_sun.append(np.nansum(pred_mlp==2)/pred_mlp.shape[0]/pred_mlp.shape[1])
-                        f_veg_shd.append(np.nansum(pred_mlp==6)/pred_mlp.shape[0]/pred_mlp.shape[1])
-                        f_snw_sun.append(np.nansum(pred_mlp==3)/pred_mlp.shape[0]/pred_mlp.shape[1])
-                        f_snw_shd.append(np.nansum(pred_mlp==7)/pred_mlp.shape[0]/pred_mlp.shape[1])
-                        
-                        T_sol_sun.append(np.nanmean(T_ir[pred_mlp==0]))
-                        T_sol_shd.append(np.nanmean(T_ir[pred_mlp==4]))
-                        T_res_sun.append(np.nanmean(T_ir[pred_mlp==1]))
-                        T_res_shd.append(np.nanmean(T_ir[pred_mlp==5]))
-                        T_veg_sun.append(np.nanmean(T_ir[pred_mlp==2]))
-                        T_veg_shd.append(np.nanmean(T_ir[pred_mlp==6]))
-                        T_snw_sun.append(np.nanmean(T_ir[pred_mlp==3]))
-                        T_snw_shd.append(np.nanmean(T_ir[pred_mlp==7]))
-                    else:#night 
-    
-                        if pred_mlp_noon is not None:
-    
-                            ir_good = False
-    
+                    if True:#utc.year==2023 and utc.month>=8:
+                        _,_,v = cv2.split(cv2.cvtColor(bgr,cv2.COLOR_BGR2HSV))
+                        if theta>10.0:
+                            day = True
+                            feat = get_features(bgr)
+
+                            if not np.any(np.isnan(feat)):
+                                pred_mlp = model.predict(feat).reshape(bgr.shape[0:2]).astype(float)
+                                if plots:
+                                    print(os.path.join(p3,di.split('\\')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
+        +'_bgr.png'))
+                                    plt.imshow(bgr)
+                                    plt.title('bgr')
+                                    plt.savefig(os.path.join(p3,di.split('\\')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
+        +'_bgr.png'),dpi=300)
+                                    plt.close()
+
+                                    plt.imshow(pred_mlp, cmap=cmap, norm=norm, interpolation='none')
+                                    plt.title('labels')
+                                    plt.savefig(os.path.join(p3,di.split('\\')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
+        +'_lab.png'),dpi=300)
+                                    plt.close()
+
+                            ir_good = False 
                             if os.path.getsize(os.path.join(di,version,f_ir))>10000:
                                 ir_raw = cv2.imread(os.path.join(di,version,f_ir),cv2.IMREAD_UNCHANGED)
+
                                 if np.std(ir_raw)<1000:
                                     ir_good = True
                                 else:
                                     ir_good = False
                             if ir_good:
+                                if di==p0:
+                                    if utc<start_dates[6] and ti_change:#calculate affine - camera shift - get mask
+                                        try:
+                                            warp_mat,_ = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=None)
+                                        except:
+                                            pass
+
+                                        mask = (pred_mlp==3) | (pred_mlp==7)
+                                elif di==p00:
+                                    if utc<=start_dates[3] and utc>=stop_dates[2]:
+                                        print(utc)
+                                        #calculate affine - camera shift - get mask
+                                        #warp_mat,_ = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=None)
+                                        mask = (pred_mlp==3) | (pred_mlp==7)
                                 _,ir = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=warp_mat)
-                                T_ir = ir.astype(np.float)
-                                #
-                                
+                                T_ir = ir.astype(float)
+
+
                                 if version=='V3':
                                     T_ir_ = T_ir.reshape(-1)
                                     tmp = cal_nsar_v3.predict(T_ir_.reshape(-1,1))
@@ -354,55 +287,125 @@ for di, versions, models, start_dates, stop_dates in zip([p1],
                                 else:
                                     T_ir = np.piecewise(T_ir, [T_ir < I0, (T_ir>=I0) & (T_ir<I1), T_ir>=I1], [lambda x: model0.intercept_[0]+model0.coef_[0][0]*x, lambda x: model1.intercept_[0]+model1.coef_[0][0]*x, lambda x: model2.intercept_[0]+model2.coef_[0][0]*x])
                                     T_ir[T_ir==model0.intercept_] = np.nan
-                                    
                                 if di==p0 or di==p1:
                                     if utc<start_dates[6]:
                                         T_ir[mask] = np.nan
                                         pred_mlp[mask] = np.nan
                                 elif di==p00:
+                                #     T_ir = T_ir*cal_cprl.coef_+cal_cprl.intercept_
+
                                     if utc<=start_dates[3] and utc>=stop_dates[2]:
                                         T_ir[mask] = np.nan
-                                        pred_mlp_noon[mask] = np.nan      
-                                
+                                        pred_mlp[mask] = np.nan      
+
+
                                 T_ir = T_ir*(1/.98)**(1/4)
+                                if plots:
+                                    plt.imshow(T_ir)
+                                    plt.colorbar()
+                                    plt.savefig(os.path.join(p3,di.split('\\')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
+        +'_tir.png'),dpi=300)
+                                    plt.close()
                             else:
                                 T_ir = np.nan*v.reshape(bgr.shape[0:2])
-    
-                            f_sol_sun.append(0)
-                            f_sol_shd.append(np.nansum(np.logical_or(pred_mlp_noon==4,pred_mlp_noon==0))/pred_mlp_noon.shape[0]/pred_mlp_noon.shape[1])
-                            f_res_sun.append(0)
-                            f_res_shd.append(np.nansum(np.logical_or(pred_mlp_noon==5,pred_mlp_noon==1))/pred_mlp_noon.shape[0]/pred_mlp_noon.shape[1])
-                            f_veg_sun.append(0)
-                            f_veg_shd.append(np.nansum(np.logical_or(pred_mlp_noon==6,pred_mlp_noon==2))/pred_mlp_noon.shape[0]/pred_mlp_noon.shape[1])
-                            f_snw_sun.append(0)
-                            f_snw_shd.append(np.nansum(np.logical_or(pred_mlp_noon==7,pred_mlp_noon==3))/pred_mlp_noon.shape[0]/pred_mlp_noon.shape[1])
-    
-                            T_sol_sun.append(np.nan)
-                            T_sol_shd.append(np.nanmean(T_ir[np.logical_or(pred_mlp_noon==4,pred_mlp_noon==0)]))
-                            T_res_sun.append(np.nan)
-                            T_res_shd.append(np.nanmean(T_ir[np.logical_or(pred_mlp_noon==5,pred_mlp_noon==1)]))
-                            T_veg_sun.append(np.nan)
-                            T_veg_shd.append(np.nanmean(T_ir[np.logical_or(pred_mlp_noon==6,pred_mlp_noon==2)]))
-                            T_snw_sun.append(np.nan)
-                            T_snw_shd.append(np.nanmean(T_ir[np.logical_or(pred_mlp_noon==7,pred_mlp_noon==3)]))
-                        else:
-                            f_sol_sun.append(np.nan)
-                            f_sol_shd.append(np.nan)
-                            f_res_sun.append(np.nan)
-                            f_res_shd.append(np.nan)
-                            f_veg_sun.append(np.nan)
-                            f_veg_shd.append(np.nan)
-                            f_snw_sun.append(np.nan)
-                            f_snw_shd.append(np.nan)
-    
-                            T_sol_sun.append(np.nan)
-                            T_sol_shd.append(np.nan)
-                            T_res_sun.append(np.nan)
-                            T_res_shd.append(np.nan)
-                            T_veg_sun.append(np.nan)
-                            T_veg_shd.append(np.nan)
-                            T_snw_sun.append(np.nan)
-                            T_snw_shd.append(np.nan)
+
+                            noon_delta_new = np.abs(theta-90) 
+                            if noon_delta_new<noon_delta_old:#near noon
+                                pred_mlp_noon=pred_mlp.copy()
+                            noon_delta_old = noon_delta_new
+
+                            f_sol_sun.append(np.nansum(pred_mlp==0)/pred_mlp.shape[0]/pred_mlp.shape[1])
+                            f_sol_shd.append(np.nansum(pred_mlp==4)/pred_mlp.shape[0]/pred_mlp.shape[1])
+                            f_res_sun.append(np.nansum(pred_mlp==1)/pred_mlp.shape[0]/pred_mlp.shape[1])
+                            f_res_shd.append(np.nansum(pred_mlp==5)/pred_mlp.shape[0]/pred_mlp.shape[1])
+                            f_veg_sun.append(np.nansum(pred_mlp==2)/pred_mlp.shape[0]/pred_mlp.shape[1])
+                            f_veg_shd.append(np.nansum(pred_mlp==6)/pred_mlp.shape[0]/pred_mlp.shape[1])
+                            f_snw_sun.append(np.nansum(pred_mlp==3)/pred_mlp.shape[0]/pred_mlp.shape[1])
+                            f_snw_shd.append(np.nansum(pred_mlp==7)/pred_mlp.shape[0]/pred_mlp.shape[1])
+
+                            T_sol_sun.append(np.nanmean(T_ir[pred_mlp==0]))
+                            T_sol_shd.append(np.nanmean(T_ir[pred_mlp==4]))
+                            T_res_sun.append(np.nanmean(T_ir[pred_mlp==1]))
+                            T_res_shd.append(np.nanmean(T_ir[pred_mlp==5]))
+                            T_veg_sun.append(np.nanmean(T_ir[pred_mlp==2]))
+                            T_veg_shd.append(np.nanmean(T_ir[pred_mlp==6]))
+                            T_snw_sun.append(np.nanmean(T_ir[pred_mlp==3]))
+                            T_snw_shd.append(np.nanmean(T_ir[pred_mlp==7]))
+                        else:#night 
+
+                            if pred_mlp_noon is not None:
+
+                                ir_good = False
+
+                                if os.path.getsize(os.path.join(di,version,f_ir))>10000:
+                                    ir_raw = cv2.imread(os.path.join(di,version,f_ir),cv2.IMREAD_UNCHANGED)
+                                    if np.std(ir_raw)<1000:
+                                        ir_good = True
+                                    else:
+                                        ir_good = False
+                                if ir_good:
+                                    _,ir = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=warp_mat)
+                                    T_ir = ir.astype(float)
+                                    #
+
+                                    if version=='V3':
+                                        T_ir_ = T_ir.reshape(-1)
+                                        tmp = cal_nsar_v3.predict(T_ir_.reshape(-1,1))
+                                        T_ir_ = tmp.reshape(-1)
+                                        T_ir = T_ir_.reshape(T_ir.shape)
+                                        T_ir[T_ir==cal_nsar_v3.intercept_] = np.nan
+                                    else:
+                                        T_ir = np.piecewise(T_ir, [T_ir < I0, (T_ir>=I0) & (T_ir<I1), T_ir>=I1], [lambda x: model0.intercept_[0]+model0.coef_[0][0]*x, lambda x: model1.intercept_[0]+model1.coef_[0][0]*x, lambda x: model2.intercept_[0]+model2.coef_[0][0]*x])
+                                        T_ir[T_ir==model0.intercept_] = np.nan
+
+                                    if di==p0 or di==p1:
+                                        if utc<start_dates[6]:
+                                            T_ir[mask] = np.nan
+                                            pred_mlp[mask] = np.nan
+                                    elif di==p00:
+                                        if utc<=start_dates[3] and utc>=stop_dates[2]:
+                                            T_ir[mask] = np.nan
+                                            pred_mlp_noon[mask] = np.nan      
+
+                                    T_ir = T_ir*(1/.98)**(1/4)
+                                else:
+                                    T_ir = np.nan*v.reshape(bgr.shape[0:2])
+
+                                f_sol_sun.append(0)
+                                f_sol_shd.append(np.nansum(np.logical_or(pred_mlp_noon==4,pred_mlp_noon==0))/pred_mlp_noon.shape[0]/pred_mlp_noon.shape[1])
+                                f_res_sun.append(0)
+                                f_res_shd.append(np.nansum(np.logical_or(pred_mlp_noon==5,pred_mlp_noon==1))/pred_mlp_noon.shape[0]/pred_mlp_noon.shape[1])
+                                f_veg_sun.append(0)
+                                f_veg_shd.append(np.nansum(np.logical_or(pred_mlp_noon==6,pred_mlp_noon==2))/pred_mlp_noon.shape[0]/pred_mlp_noon.shape[1])
+                                f_snw_sun.append(0)
+                                f_snw_shd.append(np.nansum(np.logical_or(pred_mlp_noon==7,pred_mlp_noon==3))/pred_mlp_noon.shape[0]/pred_mlp_noon.shape[1])
+
+                                T_sol_sun.append(np.nan)
+                                T_sol_shd.append(np.nanmean(T_ir[np.logical_or(pred_mlp_noon==4,pred_mlp_noon==0)]))
+                                T_res_sun.append(np.nan)
+                                T_res_shd.append(np.nanmean(T_ir[np.logical_or(pred_mlp_noon==5,pred_mlp_noon==1)]))
+                                T_veg_sun.append(np.nan)
+                                T_veg_shd.append(np.nanmean(T_ir[np.logical_or(pred_mlp_noon==6,pred_mlp_noon==2)]))
+                                T_snw_sun.append(np.nan)
+                                T_snw_shd.append(np.nanmean(T_ir[np.logical_or(pred_mlp_noon==7,pred_mlp_noon==3)]))
+                            else:
+                                f_sol_sun.append(np.nan)
+                                f_sol_shd.append(np.nan)
+                                f_res_sun.append(np.nan)
+                                f_res_shd.append(np.nan)
+                                f_veg_sun.append(np.nan)
+                                f_veg_shd.append(np.nan)
+                                f_snw_sun.append(np.nan)
+                                f_snw_shd.append(np.nan)
+
+                                T_sol_sun.append(np.nan)
+                                T_sol_shd.append(np.nan)
+                                T_res_sun.append(np.nan)
+                                T_res_shd.append(np.nan)
+                                T_veg_sun.append(np.nan)
+                                T_veg_shd.append(np.nan)
+                                T_snw_sun.append(np.nan)
+                                T_snw_shd.append(np.nan)
                 except Exception as e:
                     f_sol_sun.append(np.nan)
                     f_sol_shd.append(np.nan)
@@ -432,13 +435,14 @@ for di, versions, models, start_dates, stop_dates in zip([p1],
                 times.append(utc)
 
                 n_img=n_img+1
+                print(n_img%25)
                 ti_change = False
             
             elif utc>stop_dates[ti] and utc<stop_dates[-1]:
                 ti = ti+1
                 ti_change = True
-    print(len(times),len(daylight),len(elevation),len(f_sol_sun),len(T_sol_sun))
-    df = pd.DataFrame(data={'times':times,'daylight':daylight,'elevation':elevation,'azimuth':azimuth,'fssun':f_sol_sun,'fsshd':f_sol_shd,'frsun':f_res_sun,'frshd':f_res_shd,'fvsun':f_veg_sun,'fvshd':f_veg_shd,'fwsun':f_snw_sun,'fwshd':f_snw_shd,'Tssun':T_sol_sun,'Tsshd':T_sol_shd,'Trsun':T_res_sun,'Trshd':T_res_shd,'Tvsun':T_veg_sun,'Tvshd':T_veg_shd,'Twsun':T_snw_sun,'Twshd':T_snw_shd})
-    df.to_csv(os.path.join(p3,di.split('/')[-1].lower()+'_'+version+'_output.csv'))
+    #print(len(times),len(daylight),len(elevation),len(f_sol_sun),len(T_sol_sun))
+    # df = pd.DataFrame(data={'times':times,'daylight':daylight,'elevation':elevation,'azimuth':azimuth,'fssun':f_sol_sun,'fsshd':f_sol_shd,'frsun':f_res_sun,'frshd':f_res_shd,'fvsun':f_veg_sun,'fvshd':f_veg_shd,'fwsun':f_snw_sun,'fwshd':f_snw_shd,'Tssun':T_sol_sun,'Tsshd':T_sol_shd,'Trsun':T_res_sun,'Trshd':T_res_shd,'Tvsun':T_veg_sun,'Tvshd':T_veg_shd,'Twsun':T_snw_sun,'Twshd':T_snw_shd})
+    # df.to_csv(os.path.join(p3,di.split('/')[-1].lower()+'_'+version+'_output.csv'))
 
 
