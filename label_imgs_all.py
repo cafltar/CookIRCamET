@@ -235,18 +235,18 @@ for di, versions, models, start_dates, stop_dates in zip([p1],
     
                         if not np.any(np.isnan(feat)):
                             pred_mlp = model.predict(feat).reshape(bgr.shape[0:2]).astype(np.float)
-                            if plots and n_img%250==0:
+                            if plots and n_img%100==0:
                                 plt.imclf(bgr)
                                 plt.title('bgr')
                                 plt.savefig(os.path.join(p3,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
     +'_bgr.png'),dpi=300)
-                                plt.clf()
+                                plt.close()
     
                                 plt.imclf(pred_mlp, cmap=cmap, norm=norm, interpolation='none')
                                 plt.title('labels')
                                 plt.savefig(os.path.join(p3,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
     +'_lab.png'),dpi=300)
-                                plt.clf()
+                                plt.close()
                         
                         ir_good = False 
                         if os.path.getsize(os.path.join(di,version,f_ir))>10000:
@@ -297,12 +297,12 @@ for di, versions, models, start_dates, stop_dates in zip([p1],
                                     
                             
                             T_ir = T_ir*(1/.98)**(1/4)
-                            if plots and n_img%250==0:
+                            if plots and n_img%100==0:
                                 plt.imclf(T_ir)
                                 plt.colorbar()
                                 plt.savefig(os.path.join(p3,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
     +'_tir.png'),dpi=300)
-                                plt.clf()
+                                plt.close()
                         else:
                             T_ir = np.nan*v.reshape(bgr.shape[0:2])
     
