@@ -150,7 +150,7 @@ if __name__ == "__main__":
     plt.ylabel("Predicted")
     plt.xlabel("Observed")
     plt.title(version+" Confusion Matrix")
-    plt.savefig(os.path.join(p3,'m_'+version+'_'+model+'_'+hy+'_final.png'),dpi=300)
+    plt.savefig(os.path.join(p4,'m_'+version+'_'+model+'_'+hy+'_final.png'),dpi=300)
     
     print(f,a)
     
