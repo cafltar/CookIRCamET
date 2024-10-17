@@ -231,7 +231,7 @@ for di, versions, models, start_dates, stop_dates in zip([p1],
                     _,_,v = cv2.split(cv2.cvtColor(bgr,cv2.COLOR_BGR2HSV))
                     if theta>10.0:
                         day = True
-                        feat = get_features(bgr)
+                        feat,_ = get_features(bgr)
     
                         if not np.any(np.isnan(feat)):
                             pred_mlp = model.predict(feat).reshape(bgr.shape[0:2]).astype(np.float)

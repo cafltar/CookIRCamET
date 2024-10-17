@@ -72,7 +72,7 @@ def cornfusion(obs,pred,nclass):
     precis = np.diag(M)/np.sum(M,axis=0)
 
     f1=(recall*precis/(recall+precis)*2)
-    f1_weighted=np.sum(f1*np.sum(M, axis=1))
+    f1_weighted=np.nansum(f1*np.nansum(M, axis=1))
 
     return M, f1_weighted, correct/total
 
@@ -298,7 +298,7 @@ def register_ir(ir,v,bgr,warp_mat=None):
         warp_dst = cv2.warpAffine(ir, warp_mat[0], (v.shape[1], v.shape[0]),flags=cv2.INTER_NEAREST)   
     return warp_mat, warp_dst
 
-def get_features(bgr):
+def get_features(bgr,keep=np.arange(0,108,1)):
     lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
     img = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
@@ -306,25 +306,64 @@ def get_features(bgr):
     h,s,v = cv2.split(hsv)
     b,g,r = cv2.split(bgr)
     chan_funs = []
+    chan_labs = []
     img_size = b.shape
 
     ddepth = cv2.CV_16S
 
-    for c in [b,g,r,h,s,v,l,a,bb]:
-        chan_funs.append(c)
-        chan_funs.append(cv2.GaussianBlur(c,(15,15),cv2.BORDER_DEFAULT))
-        chan_funs.append(cv2.GaussianBlur(c,(31,31),cv2.BORDER_DEFAULT))
-        chan_funs.append(localSD(c, 127))
-        chan_funs.append(localSD(c, 63))
-        chan_funs.append(localSD(c, 31))
-        chan_funs.append(LBP(c, 32, 4, method='ror'))
-        chan_funs.append(LBP(c, 24, 3, method='ror'))
-        chan_funs.append(LBP(c, 16, 2, method='ror'))
-        chan_funs.append(cv2.Laplacian(c,ddepth,ksize=3))
-        chan_funs.append(cv2.Laplacian(c,ddepth,ksize=7))
-        chan_funs.append(cv2.Laplacian(c,ddepth,ksize=15))
+    idx = 0
+    for c,c_name in zip([b,g,r,h,s,v,l,a,bb],['b','g','r','h','s','v','l','a','bb']):
+        if idx in keep:
+            chan_funs.append(c)
+            chan_labs.append(c_name)
+        idx+=1
+        if idx in keep:
+            chan_funs.append(cv2.GaussianBlur(c,(15,15),cv2.BORDER_DEFAULT))
+            chan_labs.append(c_name+'blur15')
+        idx+=1
+        if idx in keep:
+            chan_funs.append(cv2.GaussianBlur(c,(31,31),cv2.BORDER_DEFAULT))
+            chan_labs.append(c_name+'blur31')
+        idx+=1
+        if idx in keep:
+            chan_funs.append(localSD(c, 127))
+            chan_labs.append(c_name+'sd127')
+        idx+=1
+        if idx in keep:
+            chan_funs.append(localSD(c, 63))
+            chan_labs.append(c_name+'sd63')
+        idx+=1
+        if idx in keep:
+            chan_funs.append(localSD(c, 31))
+            chan_labs.append(c_name+'sd31')
+        idx+=1
+        if idx in keep:
+            chan_funs.append(LBP(c, 32, 4, method='ror'))
+            chan_labs.append(c_name+'lbp32')
+        idx+=1
+        if idx in keep:
+            chan_funs.append(LBP(c, 24, 3, method='ror'))
+            chan_labs.append(c_name+'lbp24')
+        idx+=1
+        if idx in keep:
+            chan_funs.append(LBP(c, 16, 2, method='ror'))
+            chan_labs.append(c_name+'lbp16')
+        idx+=1
+        if idx in keep:
+            chan_funs.append(cv2.Laplacian(c,ddepth,ksize=3))
+            chan_labs.append(c_name+'lap3')
+        idx+=1
+        if idx in keep:
+            chan_funs.append(cv2.Laplacian(c,ddepth,ksize=7))
+            chan_labs.append(c_name+'lap7')
+        idx+=1
+        if idx in keep:
+            chan_funs.append(cv2.Laplacian(c,ddepth,ksize=15))
+            chan_labs.append(c_name+'lap15')
+        idx+=1
     ravels = []
     for cf in chan_funs:
         ravels.append(cf.ravel().T)
     feat = np.vstack(ravels).T
-    return feat
+    return feat, chan_labs
+        
