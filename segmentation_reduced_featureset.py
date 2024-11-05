@@ -30,15 +30,7 @@ import pickle
 import logging
 logging.basicConfig(level=logging.INFO)
 
-
-# In[2]:
-
-
 train_fraction = 0.9
-
-
-# In[ ]:
-
 
 model='pa_batch'
 datestr = datetime.strftime(datetime.now(),'%Y%m%d')
@@ -112,7 +104,12 @@ for hy,version in zip(['2024','2023','2023'],['V3','V2','V1']):
     print(keep)
     
     keep = selector.transform(np.arange(0,len(chan_labs),1).reshape(1,-1))
-    
+
+    filename = os.path.join(p3,'input_vars_'+version+'_'+model+'_'+datestr+'_reduced.pk.sav')
+    with open(filename, 'wb') as f:  # Python 3: open(..., 'wb'
+        pickle.dump(pipeline, f)
+
+
     linmod = PassiveAggressiveClassifier()
     ss = StandardScaler()
     pipeline = Pipeline(steps=[("scaler", ss), ("linmod", linmod)])
