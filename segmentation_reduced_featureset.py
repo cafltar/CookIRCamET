@@ -107,7 +107,7 @@ for hy,version in zip(['2024','2023','2023'],['V3','V2','V1']):
 
     filename = os.path.join(p3,'input_vars_'+version+'_'+model+'_'+datestr+'_reduced.pk.sav')
     with open(filename, 'wb') as f:  # Python 3: open(..., 'wb'
-        pickle.dump(pipeline, f)
+        pickle.dump(keep, f)
 
 
     linmod = PassiveAggressiveClassifier()
