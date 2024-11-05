@@ -42,6 +42,7 @@ else:
     p0 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2023')
     p1 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2024')
     p00 = os.path.join('../../','raw','CookIRCamET','Images','CprlHY2023')
+    p11 = os.path.join('../../','raw','CookIRCamET','Images','CprlHY2024')
     p3 = os.path.join('../../','work','CookIRCamET','Working')
     p4 = os.path.join('../../','work','CookIRCamET','Figures')
 
