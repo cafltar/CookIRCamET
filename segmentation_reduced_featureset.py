@@ -37,10 +37,10 @@ datestr = datetime.strftime(datetime.now(),'%Y%m%d')
 for hy,version in zip(['2024','2023','2023'],['V3','V2','V1']):
     fs_list = []
     print(version)
-    p1 = os.path.join('../../','work','CookIRCamET','Images','CookHY'+hy,version,'TifPng','RGB')
-    p2 = os.path.join('../../','work','CookIRCamET','Images','CookHY'+hy,version,'TifPng')
-    p11 = os.path.join('../../','work','CookIRCamET','Images','CprlHY'+hy,version,'TifPng','RGB')
-    p22 = os.path.join('../../','work','CookIRCamET','Images','CprlHY'+hy,version,'TifPng')
+    p1 = os.path.join('/90daydata/nsaru','work','CookIRCamET','Images','CookHY'+hy,version,'TifPng','RGB')
+    p2 = os.path.join('/90daydata/nsaru','work','CookIRCamET','Images','CookHY'+hy,version,'TifPng')
+    p11 = os.path.join('/90daydata/nsaru','work','CookIRCamET','Images','CprlHY'+hy,version,'TifPng','RGB')
+    p22 = os.path.join('/90daydata/nsaru','work','CookIRCamET','Images','CprlHY'+hy,version,'TifPng')
     
     p1_list = [p1]
     p2_list = [p2]
