@@ -34,7 +34,7 @@ train_fraction = 0.9
 
 model='pa_batch'
 datestr = datetime.strftime(datetime.now(),'%Y%m%d')
-for hy,version in zip(['2024','2023','2023'],['V3','V2','V1']):
+for hy,version in zip(['2023'],['V1']):
     fs_list = []
     print(version)
     p1 = os.path.join('/90daydata/nsaru','work','CookIRCamET','Images','CookHY'+hy,version,'TifPng','RGB')

@@ -28,10 +28,10 @@ stop_dates_cook = [*pd.read_excel(os.path.join(p0,'StartStopDates.xlsx')).Stop.s
 # In[3]:
 
 print(pd.read_excel(os.path.join(p11,'StartStopDates.xlsx')).head())
-start_dates_cprl = [pd.read_excel(os.path.join(p00,'StartStopDates.xlsx'),dtypes={'Start':str,'Stop':str}).Start.str.strip("'").values.tolist(),
-                    pd.read_excel(os.path.join(p11,'StartStopDates.xlsx'),dtypes={'Start':str,'Stop':str}).Start.str.strip("'").values.tolist()]
-stop_dates_cprl = [pd.read_excel(os.path.join(p00,'StartStopDates.xlsx'),dtypes={'Start':str,'Stop':str}).Stop.str.strip("'").values.tolist(),
-                    pd.read_excel(os.path.join(p11,'StartStopDates.xlsx'),dtypes={'Start':str,'Stop':str}).Stop.str.strip("'").values.tolist()]
+start_dates_cprl = [*pd.read_excel(os.path.join(p00,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Start.str.strip("'").values.tolist(),
+                    *pd.read_excel(os.path.join(p11,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Start.str.strip("'").values.tolist()]
+stop_dates_cprl = [*pd.read_excel(os.path.join(p00,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Stop.str.strip("'").values.tolist(),
+                    *pd.read_excel(os.path.join(p11,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Stop.str.strip("'").values.tolist()]
 
 
 # In[4]:
@@ -47,13 +47,13 @@ stop_dates_cprl = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d
 # In[5]:
 
 
-model_pa_v1 = pickle.load(open(os.path.join(p3,'model_pipeline_V1_pa_batch_20240919_reduced.pk.sav'), 'rb'))
-model_pa_v2 = pickle.load(open(os.path.join(p3,'model_pipeline_V2_pa_batch_20241030_reduced.pk.sav'), 'rb'))
-model_pa_v3 = pickle.load(open(os.path.join(p3,'model_pipeline_V3_pa_batch_20241030_reduced.pk.sav'), 'rb'))
+model_pa_v1 = pickle.load(open(os.path.join(p3,'model_pipeline_V1_pa_batch_20241107_reduced.pk.sav'), 'rb'))
+model_pa_v2 = pickle.load(open(os.path.join(p3,'model_pipeline_V2_pa_batch_20241105_reduced.pk.sav'), 'rb'))
+model_pa_v3 = pickle.load(open(os.path.join(p3,'model_pipeline_V3_pa_batch_20241105_reduced.pk.sav'), 'rb'))
 
-keep_pa_v1 = pickle.load(open(os.path.join(p3,'input_vars_V1_pa_batch_20240919_reduced.pk.sav'), 'rb'))
-keep_pa_v2 = pickle.load(open(os.path.join(p3,'input_vars_V2_pa_batch_20241030_reduced.pk.sav'), 'rb'))
-keep_pa_v3 = pickle.load(open(os.path.join(p3,'input_vars_V3_pa_batch_20241030_reduced.pk.sav'), 'rb'))
+keep_pa_v1 = pickle.load(open(os.path.join(p3,'input_vars_V1_pa_batch_20241107_reduced.pk.sav'), 'rb'))
+keep_pa_v2 = pickle.load(open(os.path.join(p3,'input_vars_V2_pa_batch_20241105_reduced.pk.sav'), 'rb'))
+keep_pa_v3 = pickle.load(open(os.path.join(p3,'input_vars_V3_pa_batch_20241105_reduced.pk.sav'), 'rb'))
 
 cal_nsar_v0 = pickle.load(open(os.path.join(p3,'calibration_nsar1.pk.sav'), 'rb'))#20220705
 cal_nsar_v1 = pickle.load(open(os.path.join(p3,'calibration_nsar2.pk.sav'), 'rb'))#20221122
