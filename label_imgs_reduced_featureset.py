@@ -65,19 +65,12 @@ cal_nsar_v3 = pickle.load(open(os.path.join(p3,'calibration_nsar_lf_v3.pk.sav'),
 cal_cprl = pickle.load(open(os.path.join(p3,'calibration_cprl1.pk.sav'), 'rb'))#20230305
 
 
-# In[6]:
-
-
 print('%3.4fx%3.4f'%(cal_cprl.coef_[0][0],cal_cprl.intercept_))
 print('%3.4fx%3.4f'%(cal_nsar_v2.coef_[0][0],cal_nsar_v2.intercept_))
 print('%3.4fx%3.4f'%(cal_nsar_v3.coef_[0][0],cal_nsar_v3.intercept_))
 print('%3.4fx+%3.4f x<%3.4f'%(model0.coef_[0][0],model0.intercept_,I0))
 print('%3.5fx+%3.4f %3.5f<=x<%3.4f'%(model1.coef_[0][0],model1.intercept_,I0,I1))
 print('%3.4fx+%3.4f x>=%3.4f'%(model2.coef_[0][0],model2.intercept_,I1))
-
-
-
-# In[ ]:
 
 
 for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
@@ -233,13 +226,13 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                         if not np.any(np.isnan(feat)):
                             pred_pa = model.predict(feat).reshape(bgr.shape[0:2]).astype(np.float)
                             if plots and n_img%100==0:
-                                plt.imclf(bgr)
+                                plt.imshow(bgr)
                                 plt.title('bgr')
                                 plt.savefig(os.path.join(p4,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
     +'_bgr.png'),dpi=300)
                                 plt.close()
     
-                                plt.imclf(pred_pa, cmap=cmap, norm=norm, interpolation='none')
+                                plt.imshow(pred_pa, cmap=cmap, norm=norm, interpolation='none')
                                 plt.title('labels')
                                 plt.savefig(os.path.join(p4,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
     +'_lab.png'),dpi=300)
@@ -295,7 +288,7 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                             
                             T_ir = T_ir*(1/.98)**(1/4)
                             if plots and n_img%100==0:
-                                plt.imclf(T_ir)
+                                plt.imwhow(T_ir)
                                 plt.colorbar()
                                 plt.savefig(os.path.join(p4,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
     +'_tir.png'),dpi=300)
@@ -437,5 +430,3 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
         print(len(times),len(daylight),len(elevation),len(f_sol_sun),len(T_sol_sun))
         df = pd.DataFrame(data={'times':times,'daylight':daylight,'elevation':elevation,'azimuth':azimuth,'fssun':f_sol_sun,'fsshd':f_sol_shd,'frsun':f_res_sun,'frshd':f_res_shd,'fvsun':f_veg_sun,'fvshd':f_veg_shd,'fwsun':f_snw_sun,'fwshd':f_snw_shd,'Tssun':T_sol_sun,'Tsshd':T_sol_shd,'Trsun':T_res_sun,'Trshd':T_res_shd,'Tvsun':T_veg_sun,'Tvshd':T_veg_shd,'Twsun':T_snw_sun,'Twshd':T_snw_shd})
         df.to_csv(os.path.join(p3,di.split('/')[-1].lower()+'_'+version+'_pa_output.csv'))
-
-
