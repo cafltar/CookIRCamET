@@ -288,7 +288,7 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                             
                             T_ir = T_ir*(1/.98)**(1/4)
                             if plots and n_img%100==0:
-                                plt.imwhow(T_ir)
+                                plt.imshow(T_ir)
                                 plt.colorbar()
                                 plt.savefig(os.path.join(p4,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
     +'_tir.png'),dpi=300)
