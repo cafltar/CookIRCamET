@@ -1,6 +1,7 @@
 #import sys
 #import numpy as np
 import cv2
+from utils_segmentation import get_features
 import time
 from time import sleep
 from datetime import timezone
@@ -43,71 +44,72 @@ BUF_SIZE = 2
 q = Queue(BUF_SIZE)
 
 def py_frame_callback(frame, userptr):
-  array_pointer = cast(frame.contents.data, POINTER(c_uint16 * (frame.contents.width * frame.contents.height)))
-  data = np.frombuffer(
+    array_pointer = cast(frame.contents.data, POINTER(c_uint16 * (frame.contents.width * frame.contents.height)))
+    data = np.frombuffer(
     array_pointer.contents, dtype=np.dtype(np.uint16)
-  ).reshape(
+    ).reshape(
     frame.contents.height, frame.contents.width
-  ) # no copy
-  
-  if frame.contents.data_bytes != (2 * frame.contents.width * frame.contents.height):
-    return
-
-  if not q.full():
-    q.put(data)
+    ) # no copy
+    
+    if frame.contents.data_bytes != (2 * frame.contents.width * frame.contents.height):
+        return
+    
+    if not q.full():
+        q.put(data)
 
 PTR_PY_FRAME_CALLBACK = CFUNCTYPE(None, POINTER(uvc_frame), c_void_p)(py_frame_callback)
 
 class ir_cam:
-  def __init__(self,waittime):
-    self.ctx = POINTER(uvc_context)()
-    self.ctrl = uvc_stream_ctrl()
-    self.waittime=waittime
-    res = libuvc.uvc_init(byref(self.ctx), 0)
-    if res < 0:
-      print("uvc_init error")
-      exit(1)
-    self.get_devices()
-      
-    if len(self.devs) == 0:
-      print("Did not find any devices")
-      exit(1)
-
-    print("Found {} devices".format(len(self.devs)))
+    def __init__(self,waittime,save=True):
+        self.ctx = POINTER(uvc_context)()
+        self.ctrl = uvc_stream_ctrl()
+        self.waittime = waittime
+        self.save =  save
+        res = libuvc.uvc_init(byref(self.ctx), 0)
+        if res < 0:
+            print("uvc_init error")
+            exit(1)
+        self.get_devices()
+          
+        if len(self.devs) == 0:
+            print("Did not find any devices")
+            exit(1)
+        
+        print("Found {} devices".format(len(self.devs)))
 
         
-    second = False
-    for (desc, self.dev) in self.devs:
-      self.devh = POINTER(uvc_device_handle)()
-      res = libuvc.uvc_open(self.dev, byref(self.devh))
-      if res == 0:
-        break
-      print("could not open {}, trying next".format(desc.serialNumber))
-      second = True
-
-    if res < 0:
-      print("Could not open any devices")
-      exit(1)
-
-    print("device opened: ", desc.manufacturer, desc.product, desc.serialNumber)
-
-    print_device_info(self.devh)
-    print_device_formats(self.devh)
-
-    frame_formats = uvc_get_frame_formats_by_guid(self.devh, VS_FMT_GUID_Y16)
-    if len(frame_formats) == 0:
-      print("device does not support Y16")
-      exit(1)
-
-    libuvc.uvc_get_stream_ctrl_format_size(self.devh, byref(self.ctrl), UVC_FRAME_FORMAT_Y16,
-                                           frame_formats[0].wWidth, frame_formats[0].wHeight, int(1e7 / frame_formats[0].dwDefaultFrameInterval)
-                                           )
-
-    res = libuvc.uvc_start_streaming(self.devh, byref(self.ctrl), PTR_PY_FRAME_CALLBACK, None, 0)
-    if res < 0:
-      print("uvc_start_streaming failed: {0}".format(res))
-      exit(1)
-    return None
+        second = False
+        for (desc, self.dev) in self.devs:
+          self.devh = POINTER(uvc_device_handle)()
+          res = libuvc.uvc_open(self.dev, byref(self.devh))
+          if res == 0:
+            break
+          print("could not open {}, trying next".format(desc.serialNumber))
+          second = True
+        
+        if res < 0:
+          print("Could not open any devices")
+          exit(1)
+        
+        print("device opened: ", desc.manufacturer, desc.product, desc.serialNumber)
+        
+        print_device_info(self.devh)
+        print_device_formats(self.devh)
+        
+        frame_formats = uvc_get_frame_formats_by_guid(self.devh, VS_FMT_GUID_Y16)
+        if len(frame_formats) == 0:
+          print("device does not support Y16")
+          exit(1)
+        
+        libuvc.uvc_get_stream_ctrl_format_size(self.devh, byref(self.ctrl), UVC_FRAME_FORMAT_Y16,
+                                               frame_formats[0].wWidth, frame_formats[0].wHeight, int(1e7 / frame_formats[0].dwDefaultFrameInterval)
+                                               )
+        
+        res = libuvc.uvc_start_streaming(self.devh, byref(self.ctrl), PTR_PY_FRAME_CALLBACK, None, 0)
+        if res < 0:
+          print("uvc_start_streaming failed: {0}".format(res))
+          exit(1)
+        return None
       
   def get_devices(self):
 
@@ -138,12 +140,17 @@ class ir_cam:
   def capture(self):
     now = datetime.now(timezone.utc)
     current_time = now.strftime("%Y%m%d_%H%M%S")
-    ir = q.get(True, 500)            
-    fname = current_time+'_ir.png'
-    logging.info(os.path.join(p,fname))
-    cv2.imwrite(os.path.join(p,fname),ir)
-    upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
-
+    ir = q.get(True, 500)
+    if self.save:
+        fname = current_time+'_ir.png'
+        logging.info(os.path.join(p,fname))
+        cv2.imwrite(os.path.join(p,fname),ir)
+        upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
+    else:
+        fname = 'new_ir.png'
+        logging.info(os.path.join(p,fname))
+        cv2.imwrite(os.path.join(p,fname),ir)
+        
     cv2.normalize(ir, ir, 0, 65535, cv2.NORM_MINMAX)
     np.right_shift(ir, 8, ir)
     cv2.imwrite(os.path.join(web,'bar.bmp'),np.uint8(ir))
@@ -161,8 +168,9 @@ class ir_cam:
     libuvc.uvc_exit(self.ctx)
 
 class bgr_cam:
-  def __init__(self,rx,ry,exp_time,frame_time,brightness,contrast,waittime):
+  def __init__(self,rx,ry,exp_time,frame_time,brightness,contrast,waittime,save=True):
     self.waittime=waittime
+    self.save =  save
     self.cam_bgr = Picamera2(0)
     camera_config = self.cam_bgr.create_still_configuration(main={"size": (rx, ry)})
     self.cam_bgr.configure(camera_config)
@@ -189,10 +197,16 @@ class bgr_cam:
     current_time = now.strftime("%Y%m%d_%H%M%S")
     r = self.cam_bgr.capture_array()
     r = np.flip(r,axis=2)
-    fname = current_time+'_bgr.png'
-    logging.info(os.path.join(p,fname))
-    cv2.imwrite(os.path.join(p,fname),r)
-    upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
+    if self.save:
+        fname = current_time+'_bgr.png'
+        logging.info(os.path.join(p,fname))
+        cv2.imwrite(os.path.join(p,fname),r)
+        upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
+    else:
+        fname = 'new_bgr.png'
+        logging.info(os.path.join(p,fname))
+        cv2.imwrite(os.path.join(p,fname),r)
+    
     logging.info(os.path.join(web,'foo.bmp'))
     cv2.imwrite(os.path.join(web,'foo.bmp'),r)
     return r
@@ -204,3 +218,51 @@ class bgr_cam:
   
   def __del__(self):
       self.cam_bgr.stop()
+
+
+class image_model:
+    def __init__(self,input_vars,seg_model,ir_cal,lat, lon,warp_mat=None):
+        self.input_vars = input_vars
+        self.seg_model = seg_model
+        self.ir_cal = ir_cal
+        self.warp_mat = warp_mat
+
+    def get_labels(self, bgr):        
+        feat,_ = get_features(bgr,self.input_vars)
+        self.labels = model.predict(feat).reshape(bgr.shape[0:2]).astype(np.float)
+        return self.labels
+
+    def get_ir(self,ir):
+        _,_,v = cv2.split(cv2.cvtColor(bgr,cv2.COLOR_BGR2HSV))
+        _,ir = register_ir(ir,v.reshape(bgr.shape[0:2]),bgr,warp_mat=self.warp_mat)
+        T_ir = ir.astype(np.float)
+        T_ir_ = T_ir.reshape(-1)
+        tmp = self.ir_cal.predict(T_ir_.reshape(-1,1))
+        T_ir_ = tmp.reshape(-1)
+        self.T_ir = T_ir_.reshape(T_ir.shape)        
+        self.T_ir[T_ir==self.ir_cal.intercept_] = np.nan
+        return self.T_ir
+        
+    def get_temps(self):
+        f = np.nan*np.ones(8)
+        T = np.nan*np.ones(8)
+        
+        f[0] = np.nansum(self.labels==0)/self.labels.shape[0]/self.labels.shape[1]
+        f[1] = np.nansum(self.labels==4)/self.labels.shape[0]/self.labels.shape[1]
+        f[2] = np.nansum(self.labels==1)/self.labels.shape[0]/self.labels.shape[1]
+        f[3] = np.nansum(self.labels==5)/self.labels.shape[0]/self.labels.shape[1]
+        f[4] = np.nansum(self.labels==2)/self.labels.shape[0]/self.labels.shape[1]
+        f[5] = np.nansum(self.labels==6)/self.labels.shape[0]/self.labels.shape[1]
+        f[6] = np.nansum(self.labels==3)/self.labels.shape[0]/self.labels.shape[1]
+        f[7] = np.nansum(self.labels==7)/self.labels.shape[0]/self.labels.shape[1]
+        
+        T[0] = np.nanmean(self.T_ir[self.labels==0])
+        T[1] = np.nanmean(self.T_ir[self.labels==4])
+        T[2] = np.nanmean(self.T_ir[self.labels==1])
+        T[3] = np.nanmean(self.T_ir[self.labels==5])
+        T[4] = np.nanmean(self.T_ir[self.labels==2])
+        T[5] = np.nanmean(self.T_ir[self.labels==6])
+        T[6] = np.nanmean(self.T_ir[self.labels==3])
+        T[7] = np.nanmean(self.T_ir[self.labels==7])
+
+        return f, T

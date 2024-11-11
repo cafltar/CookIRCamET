@@ -68,7 +68,7 @@ if __name__ == "__main__":
                         if not os.path.exists(os.path.join(do,'Masks')): os.mkdir(os.path.join(do,'Masks'))
                         cv2.imwrite(os.path.join(do,'Masks',f.split('_bgr')[0]+'_class8.png'),labels3)
 
-                    feat = get_features(bgr)
+                    feat,_ = get_features(bgr)
                     labels1 = labels1.ravel()        
                     labels2 = labels2.ravel() 
                     labels3 = labels3.ravel() 
