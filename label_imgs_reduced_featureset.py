@@ -1,10 +1,5 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import logging
+import traceback
 logging.basicConfig(level=logging.INFO)
 from utils_segmentation import *
 
@@ -13,47 +8,39 @@ plots = True
 cmap = mpl.colors.ListedColormap(['y', 'r', 'g','w','b','m','c','k'])
 norm = mpl.colors.BoundaryNorm([0,1,2,3,4,5,6,7,8], cmap.N)
 
-
-# In[2]:
-
-
 noon_thresh = 20#degrees
 
-start_dates_cook = [*pd.read_excel(os.path.join(p0,'StartStopDates.xlsx')).Start.str.strip("'").values.tolist(),
- *pd.read_excel(os.path.join(p1,'StartStopDates.xlsx')).astype({'Start':'str'}).Start.values.tolist()]
-stop_dates_cook = [*pd.read_excel(os.path.join(p0,'StartStopDates.xlsx')).Stop.str.strip("'").values.tolist(),
- *pd.read_excel(os.path.join(p1,'StartStopDates.xlsx')).astype({'Stop':'str'}).Stop.values.tolist()]
+start_dates_cook_v1_v2 = pd.read_excel(os.path.join(p0,'StartStopDates.xlsx')).Start.str.strip("'").values.tolist()
+start_dates_cook_v3 = pd.read_excel(os.path.join(p1,'StartStopDates.xlsx')).astype({'Start':'str'}).Start.values.tolist()
+stop_dates_cook_v1_v2 = pd.read_excel(os.path.join(p0,'StartStopDates.xlsx')).Stop.str.strip("'").values.tolist()
+stop_dates_cook_v3 = pd.read_excel(os.path.join(p1,'StartStopDates.xlsx')).astype({'Stop':'str'}).Stop.values.tolist()
 
+start_dates_cprl_v1_v2 = pd.read_excel(os.path.join(p00,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Start.str.strip("'").values.tolist()
+start_dates_cprl_v3 = pd.read_excel(os.path.join(p11,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Start.str.strip("'").values.tolist()
+stop_dates_cprl_v1_v2 = pd.read_excel(os.path.join(p00,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Stop.str.strip("'").values.tolist()
+stop_dates_cprl_v3 = pd.read_excel(os.path.join(p11,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Stop.str.strip("'").values.tolist()
 
-# In[3]:
+start_dates_cook_v1_v2 = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in start_dates_cook_v1_v2]
+stop_dates_cook_v1_v2 = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in stop_dates_cook_v1_v2]
 
-print(pd.read_excel(os.path.join(p11,'StartStopDates.xlsx')).head())
-start_dates_cprl = [*pd.read_excel(os.path.join(p00,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Start.str.strip("'").values.tolist(),
-                    *pd.read_excel(os.path.join(p11,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Start.str.strip("'").values.tolist()]
-stop_dates_cprl = [*pd.read_excel(os.path.join(p00,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Stop.str.strip("'").values.tolist(),
-                    *pd.read_excel(os.path.join(p11,'StartStopDates.xlsx'),dtype={'Start':str,'Stop':str}).Stop.str.strip("'").values.tolist()]
+start_dates_cprl_v1_v2 = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in start_dates_cprl_v1_v2]
+stop_dates_cprl_v1_v2 = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in stop_dates_cprl_v1_v2]
 
+start_dates_cook_v3 = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in start_dates_cook_v3]
+stop_dates_cook_v3 = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in stop_dates_cook_v3]
 
-# In[4]:
+start_dates_cprl_v3 = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in start_dates_cprl_v3]
+stop_dates_cprl_v3 = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in stop_dates_cprl_v3]
 
+model_pa_v1 = pickle.load(open(os.path.join(p3,'model_pipeline_V1_pa_batch_20241124_reduced.pk.sav'), 'rb'))
+model_pa_v2 = pickle.load(open(os.path.join(p3,'model_pipeline_V2_pa_batch_20241124_reduced.pk.sav'), 'rb'))
+model_pa_v3 = pickle.load(open(os.path.join(p3,'model_pipeline_V3_pa_batch_20241124_reduced.pk.sav'), 'rb'))
+model_pa_all = pickle.load(open(os.path.join(p3,'model_pipeline_all_pa_batch_20241205_reduced.pk.sav'), 'rb'))
 
-start_dates_cook = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in start_dates_cook]
-stop_dates_cook = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in stop_dates_cook]
-
-start_dates_cprl = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in start_dates_cprl]
-stop_dates_cprl = [pytz.utc.localize(datetime.strptime(d, '%Y%m%d%H%M%S')) for d in stop_dates_cprl]
-
-
-# In[5]:
-
-
-model_pa_v1 = pickle.load(open(os.path.join(p3,'model_pipeline_V1_pa_batch_20241107_reduced.pk.sav'), 'rb'))
-model_pa_v2 = pickle.load(open(os.path.join(p3,'model_pipeline_V2_pa_batch_20241105_reduced.pk.sav'), 'rb'))
-model_pa_v3 = pickle.load(open(os.path.join(p3,'model_pipeline_V3_pa_batch_20241105_reduced.pk.sav'), 'rb'))
-
-keep_pa_v1 = pickle.load(open(os.path.join(p3,'input_vars_V1_pa_batch_20241107_reduced.pk.sav'), 'rb'))
-keep_pa_v2 = pickle.load(open(os.path.join(p3,'input_vars_V2_pa_batch_20241105_reduced.pk.sav'), 'rb'))
-keep_pa_v3 = pickle.load(open(os.path.join(p3,'input_vars_V3_pa_batch_20241105_reduced.pk.sav'), 'rb'))
+keep_pa_v1 = pickle.load(open(os.path.join(p3,'input_vars_V1_pa_batch_20241124_reduced.pk.sav'), 'rb'))
+keep_pa_v2 = pickle.load(open(os.path.join(p3,'input_vars_V2_pa_batch_20241124_reduced.pk.sav'), 'rb'))
+keep_pa_v3 = pickle.load(open(os.path.join(p3,'input_vars_V3_pa_batch_20241124_reduced.pk.sav'), 'rb'))
+keep_pa_all = pickle.load(open(os.path.join(p3,'input_vars_all_pa_batch_20241205_reduced.pk.sav'), 'rb'))
 
 cal_nsar_v0 = pickle.load(open(os.path.join(p3,'calibration_nsar1.pk.sav'), 'rb'))#20220705
 cal_nsar_v1 = pickle.load(open(os.path.join(p3,'calibration_nsar2.pk.sav'), 'rb'))#20221122
@@ -72,16 +59,23 @@ print('%3.4fx+%3.4f x<%3.4f'%(model0.coef_[0][0],model0.intercept_,I0))
 print('%3.5fx+%3.4f %3.5f<=x<%3.4f'%(model1.coef_[0][0],model1.intercept_,I0,I1))
 print('%3.4fx+%3.4f x>=%3.4f'%(model2.coef_[0][0],model2.intercept_,I1))
 
+# for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
+#                                                          [['V1','V2'],['V3'],['V1','V2'],['V3']],
+#                                                          [[model_pa_v1,model_pa_v2],[model_pa_v3],[model_pa_v1,model_pa_v2],[model_pa_v3]],
+#                                                          [[keep_pa_v1,keep_pa_v2],[keep_pa_v3],[keep_pa_v1,keep_pa_v2],[keep_pa_v3]],
+#                                                          [start_dates_cook_v1_v2,start_dates_cook_v3,start_dates_cprl_v1_v2,start_dates_cprl_v3],
+#                                                          [stop_dates_cook_v1_v2, stop_dates_cook_v3,stop_dates_cprl_v1_v2,stop_dates_cprl_v3]):
 
 for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                                                          [['V1','V2'],['V3'],['V1','V2'],['V3']],
-                                                         [[model_pa_v1,model_pa_v2],[model_pa_v3],[model_pa_v1,model_pa_v2],[model_pa_v3]],
-                                                         [[keep_pa_v1,keep_pa_v2],[keep_pa_v3],[keep_pa_v1,keep_pa_v2],[keep_pa_v3]],
-                                                         [start_dates_cook,start_dates_cook,start_dates_cprl,start_dates_cprl],
-                                                         [stop_dates_cook, stop_dates_cook,stop_dates_cprl,stop_dates_cprl]):
-
+                                                         [[model_pa_all,model_pa_all],[model_pa_all],[model_pa_all,model_pa_all],[model_pa_all]],
+                                                         [[keep_pa_all,keep_pa_all],[keep_pa_all],[keep_pa_all,keep_pa_all],[keep_pa_all]],
+                                                         [start_dates_cook_v1_v2,start_dates_cook_v3,start_dates_cprl_v1_v2,start_dates_cprl_v3],
+                                                         [stop_dates_cook_v1_v2, stop_dates_cook_v3,stop_dates_cprl_v1_v2,stop_dates_cprl_v3]):
     pred_pa=None
     pred_pa_noon=None
+    warp_mat = None
+    warp_mat_assigned = False
 
     lat = np.nan
     lon = np.nan
@@ -116,31 +110,14 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
     noon_delta_new = 100
     noon_delta_old = 100
     n_img=0
- 
-    if di==p00:
-        aff_df = pd.read_csv(os.path.join(p00,'AffineCoords20230623.csv'))
-        dstXY=aff_df[['RGBx','RGBy']].values
-        srcXY=aff_df[['IRx','IRy']].values
-        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
-    elif di==p0:
-        warp_mat = (np.array([[  7.88031998,   0.28718853,  -6.50989774],
-                              [  0.03765769,   7.90500728, -28.32654208]]),
-                    np.array([[1],
-                              [1],
-                              [1],
-                              [0]], dtype=np.uint8))
-    elif di==p1:
-        aff_df = pd.read_csv(os.path.join(p1,'AffineCoords20230908_full.csv'))
-        dstXY=aff_df[['RGBx','RGBy']].values
-        srcXY=aff_df[['IRx','IRy']].values
-        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
-    elif di==p11:
-        aff_df = pd.read_csv(os.path.join(p1,'AffineCoords20240723_full.csv'))
-        dstXY=aff_df[['RGBx','RGBy']].values
-        srcXY=aff_df[['IRx','IRy']].values
-        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
-        
+         
     for version, model, keep in zip(versions,models,keeps):
+
+        pred_pa=None
+        pred_pa_noon=None
+        warp_mat = None
+        warp_mat_assigned = False
+        
         f_imgs_ir = list()
         f_imgs_bgr = list()
         utc_ir = list()
@@ -151,7 +128,7 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                 if version=='V1': 
                     t_meas = pytz.utc.localize(datetime.strptime(time_place[0],'%Y%m%d%H%M%S'))
                 elif version=='V2' or version=='V3':
-                    if di==p0 or di==p1 or di==11:
+                    if di==p0 or di==p1 or di==p11:
                         t_meas = pytz.utc.localize(datetime.strptime(time_place[0]+time_place[1],'%Y%m%d%H%M%S'))
                     elif di==p00:
                         t_meas = pytz.utc.localize(datetime.strptime(time_place[0],'%Y%m%d%H%M%S'))
@@ -177,8 +154,6 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
         utc_ir = np.array(utc_ir)[idx]
         f_imgs_ir = np.array(f_imgs_ir)[idx]
         for f_bgr, f_ir in zip(f_imgs_bgr,f_imgs_ir):
-            print(os.path.join(di,version,f_bgr),ti)
-            print(os.path.join(di,version,f_ir),ti)
             bgr = cv2.imread(os.path.join(di,version,f_bgr),cv2.IMREAD_UNCHANGED)
             #filter nighttime
             #20221017084722_-117.081903_46.781495_bgr.png
@@ -186,7 +161,7 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
             if version=='V1':
                 utc = pytz.utc.localize(datetime.strptime(time_place[0], '%Y%m%d%H%M%S'))
             elif version=='V2' or version=='V3':
-                if di==p0 or di==p1:
+                if di==p0 or di==p1 or di==p11:
                     utc = pytz.utc.localize(datetime.strptime(time_place[0]+time_place[1],'%Y%m%d%H%M%S'))
                 elif di==p00:
                     utc = pytz.utc.localize(datetime.strptime(time_place[0], '%Y%m%d%H%M%S'))
@@ -225,18 +200,17 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
     
                         if not np.any(np.isnan(feat)):
                             pred_pa = model.predict(feat).reshape(bgr.shape[0:2]).astype(np.float)
-                            if plots and n_img%100==0:
+                            if plots and ti_change:
                                 plt.imshow(bgr)
                                 plt.title('bgr')
-                                plt.savefig(os.path.join(p4,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
-    +'_bgr.png'),dpi=300)
+                                plt.savefig(os.path.join(p4,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')+'_bgr.png'),dpi=300)
                                 plt.close()
-    
+                                #plt.show()
                                 plt.imshow(pred_pa, cmap=cmap, norm=norm, interpolation='none')
                                 plt.title('labels')
-                                plt.savefig(os.path.join(p4,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
-    +'_lab.png'),dpi=300)
+                                plt.savefig(os.path.join(p4,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')+'_lab.png'),dpi=300)
                                 plt.close()
+                                #plt.show()
                         
                         ir_good = False 
                         if os.path.getsize(os.path.join(di,version,f_ir))>10000:
@@ -247,20 +221,77 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                             else:
                                 ir_good = False
                         if ir_good:
-                            if di==p0 or di==p1:
-                                if utc<start_dates[6] and ti_change:#calculate affine - camera shift - get mask
-                                    try:
-                                        warp_mat,_ = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=None)
-                                    except:
-                                        pass
+                            if (not warp_mat_assigned):
+                                print(f_bgr)
+                                if di==p0:
+                                    if utc<stop_dates[0]:
+                                        aff_df = pd.read_csv(os.path.join(p0,'AffineCoords20221028.csv'))
+                                        dstXY=aff_df[['RGBx','RGBy']].values
+                                        srcXY=aff_df[['IRx','IRy']].values
+                                        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                    elif utc>=start_dates[1] and utc<stop_dates[1]:
+                                        aff_df = pd.read_csv(os.path.join(p0,'AffineCoords20221109.csv'))
+                                        dstXY=aff_df[['RGBx','RGBy']].values
+                                        srcXY=aff_df[['IRx','IRy']].values
+                                        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                    elif utc>=start_dates[2] and utc<stop_dates[2]:
+                                        aff_df = pd.read_csv(os.path.join(p0,'AffineCoords20221127.csv'))
+                                        dstXY=aff_df[['RGBx','RGBy']].values
+                                        srcXY=aff_df[['IRx','IRy']].values
+                                        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                    elif utc>=start_dates[3] and utc<stop_dates[3]:
+                                        aff_df = pd.read_csv(os.path.join(p0,'AffineCoords20221229.csv'))
+                                        dstXY=aff_df[['RGBx','RGBy']].values
+                                        srcXY=aff_df[['IRx','IRy']].values
+                                        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                    elif utc>=start_dates[4] and utc<stop_dates[4]:
+                                        aff_df = pd.read_csv(os.path.join(p0,'AffineCoords20230320.csv'))
+                                        dstXY=aff_df[['RGBx','RGBy']].values
+                                        srcXY=aff_df[['IRx','IRy']].values
+                                        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                    elif utc>=start_dates[5] and utc<stop_dates[5]:
+                                        aff_df = pd.read_csv(os.path.join(p0,'AffineCoords20230520.csv'))
+                                        dstXY=aff_df[['RGBx','RGBy']].values
+                                        srcXY=aff_df[['IRx','IRy']].values
+                                        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                    elif utc>=start_dates[6]:
+                                        aff_df = pd.read_csv(os.path.join(p0,'AffineCoords20230520.csv'))
+                                        dstXY=aff_df[['RGBx','RGBy']].values
+                                        srcXY=aff_df[['IRx','IRy']].values
+                                        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                elif di==p1:
+                                    if utc<pytz.utc.localize(datetime.strptime('20240510223000', '%Y%m%d%H%M%S')):        
+                                        aff_df = pd.read_csv(os.path.join(p1,'AffineCoords20230908_full.csv'))
+                                        dstXY=aff_df[['RGBx','RGBy']].values
+                                        srcXY=aff_df[['IRx','IRy']].values
+                                        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                    else:        
+                                        aff_df = pd.read_csv(os.path.join(p1,'AffineCoords20240510.csv'))
+                                        dstXY=aff_df[['RGBx','RGBy']].values
+                                        srcXY=aff_df[['IRx','IRy']].values
+                                        warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                elif di==p00:
+                                    #CPRL
+                                    aff_df = pd.read_csv(os.path.join(p00,'AffineCoords20230623.csv'))
+                                    dstXY=aff_df[['RGBx','RGBy']].values
+                                    srcXY=aff_df[['IRx','IRy']].values
+                                    warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                elif di==p11:
+                                    #CPRL
+                                    aff_df = pd.read_csv(os.path.join(p11,'AffineCoords20240723.csv'))
+                                    dstXY=aff_df[['RGBx','RGBy']].values
+                                    srcXY=aff_df[['IRx','IRy']].values
+                                    warp_mat = cv2.estimateAffine2D(srcXY,dstXY)
+                                warp_mat_assigned = True
+                            
+                            if ti_change:
+                                if di==p0:
+                                    if utc<=start_dates[5]:
+                                        mask = (pred_pa==3) | (pred_pa==7)                                    
+                                # elif di==p00:
+                                #     if utc<=start_dates[3] and utc>=stop_dates[2]:
+                                #         mask = (pred_pa==3) | (pred_pa==7)
                                     
-                                    mask = (pred_pa==3) | (pred_pa==7)
-                            elif di==p00 or di==p11:
-                                if utc<=start_dates[3] and utc>=stop_dates[2]:
-                                    print(utc)
-                                    #calculate affine - camera shift - get mask
-                                    #warp_mat,_ = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=None)
-                                    mask = (pred_pa==3) | (pred_pa==7)
                             _,ir = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=warp_mat)
                             T_ir = ir.astype(np.float)
                             
@@ -274,25 +305,24 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                             else:
                                 T_ir = np.piecewise(T_ir, [T_ir < I0, (T_ir>=I0) & (T_ir<I1), T_ir>=I1], [lambda x: model0.intercept_[0]+model0.coef_[0][0]*x, lambda x: model1.intercept_[0]+model1.coef_[0][0]*x, lambda x: model2.intercept_[0]+model2.coef_[0][0]*x])
                                 T_ir[T_ir==model0.intercept_] = np.nan
-                            if di==p0 or di==p1:
-                                if utc<start_dates[6]:
+                            
+                            if di==p0:
+                                if utc<start_dates[5]:
                                     T_ir[mask] = np.nan
                                     pred_pa[mask] = np.nan
-                            elif di==p00 or di==p11:
-                            #     T_ir = T_ir*cal_cprl.coef_+cal_cprl.intercept_
-                            
-                                if utc<=start_dates[3] and utc>=stop_dates[2]:
-                                    T_ir[mask] = np.nan
-                                    pred_pa[mask] = np.nan      
+                            # elif di==p00:
+                            #     if utc<=start_dates[3] and utc>=stop_dates[2]:
+                            #         T_ir[mask] = np.nan
+                            #         pred_pa[mask] = np.nan      
                                     
                             
                             T_ir = T_ir*(1/.98)**(1/4)
-                            if plots and n_img%100==0:
+                            if plots and ti_change:
                                 plt.imshow(T_ir)
                                 plt.colorbar()
-                                plt.savefig(os.path.join(p4,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')
-    +'_tir.png'),dpi=300)
+                                plt.savefig(os.path.join(p4,di.split('/')[-1].lower()+version+'_'+datetime.strftime(utc,'%Y%m%d%H%M%S')+'_tir.png'),dpi=300)
                                 plt.close()
+                                #plt.show()
                         else:
                             T_ir = np.nan*v.reshape(bgr.shape[0:2])
     
@@ -300,7 +330,6 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                         if noon_delta_new<noon_delta_old:#near noon
                             pred_pa_noon=pred_pa.copy()
                         noon_delta_old = noon_delta_new
-    
                         f_sol_sun.append(np.nansum(pred_pa==0)/pred_pa.shape[0]/pred_pa.shape[1])
                         f_sol_shd.append(np.nansum(pred_pa==4)/pred_pa.shape[0]/pred_pa.shape[1])
                         f_res_sun.append(np.nansum(pred_pa==1)/pred_pa.shape[0]/pred_pa.shape[1])
@@ -319,7 +348,7 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                         T_snw_sun.append(np.nanmean(T_ir[pred_pa==3]))
                         T_snw_shd.append(np.nanmean(T_ir[pred_pa==7]))
                     else:#night 
-    
+                        day = False
                         if pred_pa_noon is not None:
     
                             ir_good = False
@@ -345,14 +374,14 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                                     T_ir = np.piecewise(T_ir, [T_ir < I0, (T_ir>=I0) & (T_ir<I1), T_ir>=I1], [lambda x: model0.intercept_[0]+model0.coef_[0][0]*x, lambda x: model1.intercept_[0]+model1.coef_[0][0]*x, lambda x: model2.intercept_[0]+model2.coef_[0][0]*x])
                                     T_ir[T_ir==model0.intercept_] = np.nan
                                     
-                                if di==p0 or di==p1:
-                                    if utc<start_dates[6]:
+                                if di==p0:
+                                    if utc<start_dates[5]:
                                         T_ir[mask] = np.nan
                                         pred_pa[mask] = np.nan
-                                elif di==p00 or di==p11:
-                                    if utc<=start_dates[3] and utc>=stop_dates[2]:
-                                        T_ir[mask] = np.nan
-                                        pred_pa_noon[mask] = np.nan      
+                                # elif di==p00:
+                                #     if utc<=start_dates[3] and utc>=stop_dates[2]:
+                                #         T_ir[mask] = np.nan
+                                #         pred_pa_noon[mask] = np.nan      
                                 
                                 T_ir = T_ir*(1/.98)**(1/4)
                             else:
@@ -375,6 +404,7 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                             T_veg_shd.append(np.nanmean(T_ir[np.logical_or(pred_pa_noon==6,pred_pa_noon==2)]))
                             T_snw_sun.append(np.nan)
                             T_snw_shd.append(np.nanmean(T_ir[np.logical_or(pred_pa_noon==7,pred_pa_noon==3)]))
+                        
                         else:
                             f_sol_sun.append(np.nan)
                             f_sol_shd.append(np.nan)
@@ -394,6 +424,8 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                             T_snw_sun.append(np.nan)
                             T_snw_shd.append(np.nan)
                 except Exception as e:
+                    print(e,utc)
+                    print(traceback.format_exc())
                     f_sol_sun.append(np.nan)
                     f_sol_shd.append(np.nan)
                     f_res_sun.append(np.nan)
@@ -411,9 +443,10 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                     T_veg_shd.append(np.nan)
                     T_snw_sun.append(np.nan)
                     T_snw_shd.append(np.nan)
-                    print(e)
                     if theta>10.0:
                         day = True
+                    else:
+                        day = False
 
                 daylight.append(day)
                 elevation.append(90-theta)
@@ -425,8 +458,11 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                 ti_change = False
             
             elif utc>stop_dates[ti] and utc<stop_dates[-1]:
+                print(utc)
                 ti = ti+1
                 ti_change = True
+                warp_mat_assigned = False
+
         print(len(times),len(daylight),len(elevation),len(f_sol_sun),len(T_sol_sun))
         df = pd.DataFrame(data={'times':times,'daylight':daylight,'elevation':elevation,'azimuth':azimuth,'fssun':f_sol_sun,'fsshd':f_sol_shd,'frsun':f_res_sun,'frshd':f_res_shd,'fvsun':f_veg_sun,'fvshd':f_veg_shd,'fwsun':f_snw_sun,'fwshd':f_snw_shd,'Tssun':T_sol_sun,'Tsshd':T_sol_shd,'Trsun':T_res_sun,'Trshd':T_res_shd,'Tvsun':T_veg_sun,'Tvshd':T_veg_shd,'Twsun':T_snw_sun,'Twshd':T_snw_shd})
         df.to_csv(os.path.join(p3,di.split('/')[-1].lower()+'_'+version+'_pa_output.csv'))
