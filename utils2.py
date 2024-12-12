@@ -31,7 +31,7 @@ import logging
 
 #image resolution
 ry,rx=1920,1440#2592,1952#3840,2160#160,128#256,192#960,544#1280,960#
-exp_time = 1000    
+exp_time = 800    
 frame_time = 500000//30
 brightness = 0.0
 contrast = 1.0
