@@ -48,11 +48,14 @@ cal_nsar_v2 = pickle.load(open(os.path.join(p3,'calibration_nsar3.pk.sav'), 'rb'
 [model0,model1,model2,I0,I1] = pickle.load(open(os.path.join(p3,'calibration_nsar_pwlf.pk.sav'), 'rb'))#V3
 [model0_v3,model1_v3,model2_v3,I0_v3,I1_v3] = pickle.load(open(os.path.join(p3,'calibration_nsar_pwlf_v3.pk.sav'), 'rb'))#V3
 cal_nsar_v3 = pickle.load(open(os.path.join(p3,'calibration_nsar_lf_v3.pk.sav'), 'rb'))#V3
+cal_cprl_v3 = pickle.load(open(os.path.join(p3,'calibration_cprl_lf_v3.pk.sav'), 'rb'))#V3
+[fit0,fit1,fit2,J0,J1] = pickle.load(open(os.path.join(p3,'calibration_cprl_pwlf.pk.sav'), 'rb'))#V3
 
 cal_cprl = pickle.load(open(os.path.join(p3,'calibration_cprl1.pk.sav'), 'rb'))#20230305
 
 
 print('%3.4fx%3.4f'%(cal_cprl.coef_[0][0],cal_cprl.intercept_))
+print('%3.4fx%3.4f'%(cal_cprl_v3.coef_[0][0],cal_cprl_v3.intercept_))
 print('%3.4fx%3.4f'%(cal_nsar_v2.coef_[0][0],cal_nsar_v2.intercept_))
 print('%3.4fx%3.4f'%(cal_nsar_v3.coef_[0][0],cal_nsar_v3.intercept_))
 print('%3.4fx+%3.4f x<%3.4f'%(model0.coef_[0][0],model0.intercept_,I0))
@@ -65,13 +68,27 @@ print('%3.4fx+%3.4f x>=%3.4f'%(model2.coef_[0][0],model2.intercept_,I1))
 #                                                          [[keep_pa_v1,keep_pa_v2],[keep_pa_v3],[keep_pa_v1,keep_pa_v2],[keep_pa_v3]],
 #                                                          [start_dates_cook_v1_v2,start_dates_cook_v3,start_dates_cprl_v1_v2,start_dates_cprl_v3],
 #                                                          [stop_dates_cook_v1_v2, stop_dates_cook_v3,stop_dates_cprl_v1_v2,stop_dates_cprl_v3]):
+# for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1],
+#                                                           [['V1','V2'],['V3']],
+#                                                           [[model_pa_v1,model_pa_v2],[model_pa_v3]],
+#                                                           [[keep_pa_v1,keep_pa_v2],[keep_pa_v3]],
+#                                                           [start_dates_cook_v1_v2,start_dates_cook_v3],
+#                                                           [stop_dates_cook_v1_v2, stop_dates_cook_v3]):
 
-for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
-                                                         [['V1','V2'],['V3'],['V1','V2'],['V3']],
-                                                         [[model_pa_all,model_pa_all],[model_pa_all],[model_pa_all,model_pa_all],[model_pa_all]],
-                                                         [[keep_pa_all,keep_pa_all],[keep_pa_all],[keep_pa_all,keep_pa_all],[keep_pa_all]],
-                                                         [start_dates_cook_v1_v2,start_dates_cook_v3,start_dates_cprl_v1_v2,start_dates_cprl_v3],
-                                                         [stop_dates_cook_v1_v2, stop_dates_cook_v3,stop_dates_cprl_v1_v2,stop_dates_cprl_v3]):
+# for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1],
+#                                                          [['V1','V2'],['V3']],
+#                                                          [[model_pa_all,model_pa_all],[model_pa_all]],
+#                                                          [[keep_pa_all,keep_pa_all],[keep_pa_all]],
+#                                                          [start_dates_cook_v1_v2,start_dates_cook_v3],
+#                                                          [stop_dates_cook_v1_v2, stop_dates_cook_v3]):
+
+for di, versions, models, keeps, start_dates, stop_dates in zip([p00,p11],
+                                                         [['V1','V2'],['V3']],
+                                                         [[model_pa_all,model_pa_all],[model_pa_all]],
+                                                         [[keep_pa_all,keep_pa_all],[keep_pa_all]],
+                                                         [start_dates_cprl_v1_v2,start_dates_cprl_v3],
+                                                         [stop_dates_cprl_v1_v2,stop_dates_cprl_v3]):
+
     pred_pa=None
     pred_pa_noon=None
     warp_mat = None
@@ -298,10 +315,14 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                             
                             if version=='V3':
                                 T_ir_ = T_ir.reshape(-1)
-                                tmp = cal_nsar_v3.predict(T_ir_.reshape(-1,1))
-                                T_ir_ = tmp.reshape(-1)
-                                T_ir = T_ir_.reshape(T_ir.shape)
-                                T_ir[T_ir==cal_nsar_v3.intercept_] = np.nan
+                                if di==p0 or di==p1:
+                                    tmp = cal_nsar_v3.predict(T_ir_.reshape(-1,1))
+                                    T_ir_ = tmp.reshape(-1)
+                                    T_ir = T_ir_.reshape(T_ir.shape)
+                                    T_ir[T_ir==cal_nsar_v3.intercept_] = np.nan
+                                else:
+                                    T_ir = np.piecewise(T_ir, [T_ir < J0, (T_ir>=J0) & (T_ir<J1), T_ir>=J1], [lambda x: fit0.intercept_[0]+fit0.coef_[0][0]*x, lambda x: fit1.intercept_[0]+fit1.coef_[0][0]*x, lambda x: fit2.intercept_[0]+fit2.coef_[0][0]*x])
+                                    T_ir[T_ir==fit0.intercept_] = np.nan
                             else:
                                 T_ir = np.piecewise(T_ir, [T_ir < I0, (T_ir>=I0) & (T_ir<I1), T_ir>=I1], [lambda x: model0.intercept_[0]+model0.coef_[0][0]*x, lambda x: model1.intercept_[0]+model1.coef_[0][0]*x, lambda x: model2.intercept_[0]+model2.coef_[0][0]*x])
                                 T_ir[T_ir==model0.intercept_] = np.nan
@@ -363,17 +384,20 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
                                 _,ir = register_ir(ir_raw,v.reshape(bgr.shape[0:2]),bgr,warp_mat=warp_mat)
                                 T_ir = ir.astype(np.float)
                                 #
-                                
                                 if version=='V3':
                                     T_ir_ = T_ir.reshape(-1)
-                                    tmp = cal_nsar_v3.predict(T_ir_.reshape(-1,1))
-                                    T_ir_ = tmp.reshape(-1)
-                                    T_ir = T_ir_.reshape(T_ir.shape)
-                                    T_ir[T_ir==cal_nsar_v3.intercept_] = np.nan
+                                    if di==p0 or di==p1:
+                                        tmp = cal_nsar_v3.predict(T_ir_.reshape(-1,1))
+                                        T_ir_ = tmp.reshape(-1)
+                                        T_ir = T_ir_.reshape(T_ir.shape)
+                                        T_ir[T_ir==cal_nsar_v3.intercept_] = np.nan
+                                    else:
+                                        T_ir = np.piecewise(T_ir, [T_ir < J0, (T_ir>=J0) & (T_ir<J1), T_ir>=J1], [lambda x: fit0.intercept_[0]+fit0.coef_[0][0]*x, lambda x: fit1.intercept_[0]+fit1.coef_[0][0]*x, lambda x: fit2.intercept_[0]+fit2.coef_[0][0]*x])
+                                        T_ir[T_ir==fit0.intercept_] = np.nan
                                 else:
                                     T_ir = np.piecewise(T_ir, [T_ir < I0, (T_ir>=I0) & (T_ir<I1), T_ir>=I1], [lambda x: model0.intercept_[0]+model0.coef_[0][0]*x, lambda x: model1.intercept_[0]+model1.coef_[0][0]*x, lambda x: model2.intercept_[0]+model2.coef_[0][0]*x])
                                     T_ir[T_ir==model0.intercept_] = np.nan
-                                    
+                                        
                                 if di==p0:
                                     if utc<start_dates[5]:
                                         T_ir[mask] = np.nan
@@ -465,4 +489,4 @@ for di, versions, models, keeps, start_dates, stop_dates in zip([p0,p1,p00,p11],
 
         print(len(times),len(daylight),len(elevation),len(f_sol_sun),len(T_sol_sun))
         df = pd.DataFrame(data={'times':times,'daylight':daylight,'elevation':elevation,'azimuth':azimuth,'fssun':f_sol_sun,'fsshd':f_sol_shd,'frsun':f_res_sun,'frshd':f_res_shd,'fvsun':f_veg_sun,'fvshd':f_veg_shd,'fwsun':f_snw_sun,'fwshd':f_snw_shd,'Tssun':T_sol_sun,'Tsshd':T_sol_shd,'Trsun':T_res_sun,'Trshd':T_res_shd,'Tvsun':T_veg_sun,'Tvshd':T_veg_shd,'Twsun':T_snw_sun,'Twshd':T_snw_shd})
-        df.to_csv(os.path.join(p3,di.split('/')[-1].lower()+'_'+version+'_pa_output.csv'))
+        df.to_csv(os.path.join(p3,di.split('/')[-1].lower()+'_'+version+'_pa_all_output.csv'))
