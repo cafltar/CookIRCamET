@@ -31,6 +31,21 @@ import platform
 
 
 if platform.uname().system=='Windows':
+<<<<<<< HEAD
+    q = os.path.join('F:','usda','raw','CookIRCamET')
+    p0 = os.path.join(q,'Images','CookHY2023')
+    p1 = os.path.join(q,'Images','CookHY2024')
+    p00 = os.path.join(q,'Images','CprlHY2023')
+    p3 = os.path.join('F:','usda','work','CookIRCamET','Working')
+    p4 = os.path.join('F:','usda','work','CookIRCamET','Documents')
+else:
+    q = os.path.join('../../','raw','CookIRCamET')
+    p0 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2023')
+    p1 = os.path.join('../../','raw','CookIRCamET','Images','CookHY2024')
+    p00 = os.path.join('../../','raw','CookIRCamET','Images','CprlHY2023')
+    p3 = os.path.join('../../','work','CookIRCamET','Working')
+    p4 = os.path.join('../../','work','CookIRCamET','Documents')
+=======
     q = os.path.join('Z:','usda','DataLake','raw','CookIRCamET')
     p0 = os.path.join(q,'Images','CookHY2023')
     p1 = os.path.join(q,'Images','CookHY2024')
@@ -46,6 +61,7 @@ else:
     p11 = os.path.join('/90daydata/nsaru','raw','CookIRCamET','Images','CprlHY2024')
     p3 = os.path.join('/90daydata/nsaru','work','CookIRCamET','Working')
     p4 = os.path.join('/90daydata/nsaru','work','CookIRCamET','Figures')
+>>>>>>> faaf9296fd97663785d2641135c8fbea152d47e8
 
 
 n_components = 8
