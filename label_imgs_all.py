@@ -55,6 +55,7 @@ cal_nsar_v2 = pickle.load(open(os.path.join(p3,'calibration_nsar3.pk.sav'), 'rb'
 [model0,model1,model2,I0,I1] = pickle.load(open(os.path.join(p3,'calibration_nsar_pwlf.pk.sav'), 'rb'))#V3
 [model0_v3,model1_v3,model2_v3,I0_v3,I1_v3] = pickle.load(open(os.path.join(p3,'calibration_nsar_pwlf_v3.pk.sav'), 'rb'))#V3
 cal_nsar_v3 = pickle.load(open(os.path.join(p3,'calibration_nsar_lf_v3.pk.sav'), 'rb'))#V3
+cal_cprl_v3 = pickle.load(open(os.path.join(p3,'calibration_cprl_lf_v3.pk.sav'), 'rb'))#V3
 
 cal_cprl = pickle.load(open(os.path.join(p3,'calibration_cprl1.pk.sav'), 'rb'))#20230305
 
