@@ -5,7 +5,7 @@ from utils_segmentation import get_features
 import time
 from time import sleep
 from datetime import timezone
-from azupload import *
+#from azupload import *
 
 import os
 import numpy as np
@@ -60,10 +60,11 @@ def py_frame_callback(frame, userptr):
 PTR_PY_FRAME_CALLBACK = CFUNCTYPE(None, POINTER(uvc_frame), c_void_p)(py_frame_callback)
 
 class ir_cam:
-    def __init__(self,waittime,save=True):
+    def __init__(self,waittime,cam_name,save=True):
         self.ctx = POINTER(uvc_context)()
         self.ctrl = uvc_stream_ctrl()
         self.waittime = waittime
+        self.cam_name = cam_name
         self.save =  save
         res = libuvc.uvc_init(byref(self.ctx), 0)
         if res < 0:
@@ -142,12 +143,12 @@ class ir_cam:
     current_time = now.strftime("%Y%m%d_%H%M%S")
     ir = q.get(True, 500)
     if self.save:
-        fname = current_time+'_ir.png'
+        fname = current_time+'_ir'+self.cam_name+'.png'
         logging.info(os.path.join(p,fname))
         cv2.imwrite(os.path.join(p,fname),ir)
-        upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
+        #upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
     else:
-        fname = 'new_ir.png'
+        fname = 'new_ir'+self.cam_name+'.png'
         logging.info(os.path.join(p,fname))
         cv2.imwrite(os.path.join(p,fname),ir)
         
@@ -168,8 +169,9 @@ class ir_cam:
     libuvc.uvc_exit(self.ctx)
 
 class bgr_cam:
-  def __init__(self,rx,ry,exp_time,frame_time,brightness,contrast,waittime,save=True):
+  def __init__(self,rx,ry,exp_time,frame_time,brightness,contrast,waittime,cam_name,save=True):
     self.waittime=waittime
+    self.cam_name = cam_name
     self.save =  save
     self.cam_bgr = Picamera2(0)
     camera_config = self.cam_bgr.create_still_configuration(main={"size": (rx, ry)})
@@ -198,12 +200,12 @@ class bgr_cam:
     r = self.cam_bgr.capture_array()
     r = np.flip(r,axis=2)
     if self.save:
-        fname = current_time+'_bgr.png'
+        fname = current_time+'_bgr'+self.cam_name+'.png'
         logging.info(os.path.join(p,fname))
         cv2.imwrite(os.path.join(p,fname),r)
-        upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
+        #upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
     else:
-        fname = 'new_bgr.png'
+        fname = 'new_bgr'+self.cam_name+'.png'
         logging.info(os.path.join(p,fname))
         cv2.imwrite(os.path.join(p,fname),r)
     

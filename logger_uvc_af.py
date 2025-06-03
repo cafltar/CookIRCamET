@@ -11,10 +11,12 @@ logging.basicConfig(level=logging.DEBUG)
 if __name__ == '__main__':     
       if len(sys.argv)>1:
             waittime = int(sys.argv[1])
+            cam_name = str(sys.argv[2])
       else:
             waittime = 3600
-      flir = ir_cam(waittime)
-      hq = bgr_cam(ry,rx,exp_time,frame_time,brightness,contrast,waittime)
+            cam_name = "default"
+      flir = ir_cam(waittime, cam_name)
+      hq = bgr_cam(ry,rx,exp_time,frame_time,brightness,contrast,waittime,cam_name)
 
       try:
             while True:
