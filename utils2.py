@@ -1,4 +1,4 @@
-#import sys
+import sys
 #import numpy as np
 import cv2
 #from utils_segmentation import get_features
