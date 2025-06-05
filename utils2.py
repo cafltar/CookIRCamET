@@ -1,7 +1,7 @@
 #import sys
 #import numpy as np
 import cv2
-from utils_segmentation import get_features
+#from utils_segmentation import get_features
 import time
 from time import sleep
 from datetime import timezone
@@ -188,3 +188,83 @@ class bgr_cam:
                                    "Brightness":brightness,
                                    "Contrast":contrast,             
                                    "FrameDurationLimits": (frame_time, frame_time)})
+        
+        logging.info(self.cam_bgr.controls)
+        self.cam_bgr.start()
+        success = self.cam_bgr.autofocus_cycle()
+        return None
+
+    def capture(self):
+        now = datetime.now(timezone.utc)
+        current_time = now.strftime("%Y%m%d_%H%M%S")
+        r = self.cam_bgr.capture_array()
+        r = np.flip(r,axis=2)
+        if self.save:
+            fname = current_time+'_bgr'+self.cam_name+'.png'
+            logging.info(os.path.join(p,fname))
+            cv2.imwrite(os.path.join(p,fname),r)
+            #upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
+        else:
+            fname = 'new_bgr'+self.cam_name+'.png'
+            logging.info(os.path.join(p,fname))
+            cv2.imwrite(os.path.join(p,fname),r)
+        
+        logging.info(os.path.join(web,'foo.bmp'))
+        cv2.imwrite(os.path.join(web,'foo.bmp'),r)
+        return r
+
+    def run(self):
+        while True:
+            self.capture()
+            sleep(self.waittime)
+  
+    def __del__(self):
+        self.cam_bgr.stop()
+
+
+# class image_model:
+#     def __init__(self,input_vars,seg_model,ir_cal,lat, lon,warp_mat=None):
+#         self.input_vars = input_vars
+#         self.seg_model = seg_model
+#         self.ir_cal = ir_cal
+#         self.warp_mat = warp_mat
+
+#     def get_labels(self, bgr):        
+#         feat,_ = get_features(bgr,self.input_vars)
+#         self.labels = model.predict(feat).reshape(bgr.shape[0:2]).astype(np.float)
+#         return self.labels
+
+#     def get_ir(self,ir):
+#         _,_,v = cv2.split(cv2.cvtColor(bgr,cv2.COLOR_BGR2HSV))
+#         _,ir = register_ir(ir,v.reshape(bgr.shape[0:2]),bgr,warp_mat=self.warp_mat)
+#         T_ir = ir.astype(np.float)
+#         T_ir_ = T_ir.reshape(-1)
+#         tmp = self.ir_cal.predict(T_ir_.reshape(-1,1))
+#         T_ir_ = tmp.reshape(-1)
+#         self.T_ir = T_ir_.reshape(T_ir.shape)        
+#         self.T_ir[T_ir==self.ir_cal.intercept_] = np.nan
+#         return self.T_ir
+        
+#     def get_temps(self):
+#         f = np.nan*np.ones(8)
+#         T = np.nan*np.ones(8)
+        
+#         f[0] = np.nansum(self.labels==0)/self.labels.shape[0]/self.labels.shape[1]
+#         f[1] = np.nansum(self.labels==4)/self.labels.shape[0]/self.labels.shape[1]
+#         f[2] = np.nansum(self.labels==1)/self.labels.shape[0]/self.labels.shape[1]
+#         f[3] = np.nansum(self.labels==5)/self.labels.shape[0]/self.labels.shape[1]
+#         f[4] = np.nansum(self.labels==2)/self.labels.shape[0]/self.labels.shape[1]
+#         f[5] = np.nansum(self.labels==6)/self.labels.shape[0]/self.labels.shape[1]
+#         f[6] = np.nansum(self.labels==3)/self.labels.shape[0]/self.labels.shape[1]
+#         f[7] = np.nansum(self.labels==7)/self.labels.shape[0]/self.labels.shape[1]
+        
+#         T[0] = np.nanmean(self.T_ir[self.labels==0])
+#         T[1] = np.nanmean(self.T_ir[self.labels==4])
+#         T[2] = np.nanmean(self.T_ir[self.labels==1])
+#         T[3] = np.nanmean(self.T_ir[self.labels==5])
+#         T[4] = np.nanmean(self.T_ir[self.labels==2])
+#         T[5] = np.nanmean(self.T_ir[self.labels==6])
+#         T[6] = np.nanmean(self.T_ir[self.labels==3])
+#         T[7] = np.nanmean(self.T_ir[self.labels==7])
+
+#         return f, T
