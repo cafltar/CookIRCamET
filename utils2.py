@@ -143,7 +143,7 @@ class ir_cam:
         current_time = now.strftime("%Y%m%d_%H%M%S")
         ir = q.get(True, 500)
         if self.save:
-            fname = current_time+'_ir'+self.cam_name+'.png'
+            fname = current_time+'_ir_'+self.cam_name+'.png'
             logging.info(os.path.join(p,fname))
             cv2.imwrite(os.path.join(p,fname),ir)
             #upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
@@ -200,7 +200,7 @@ class bgr_cam:
         r = self.cam_bgr.capture_array()
         r = np.flip(r,axis=2)
         if self.save:
-            fname = current_time+'_bgr'+self.cam_name+'.png'
+            fname = current_time+'_bgr_'+self.cam_name+'.png'
             logging.info(os.path.join(p,fname))
             cv2.imwrite(os.path.join(p,fname),r)
             #upload_file(raw,os.path.join(p,fname),'./CookIRCamET/Images/CookHY2024/V3/'+fname)
